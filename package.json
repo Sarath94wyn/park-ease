@@ -1,0 +1,20 @@
+{
+  "name": "parking-lot-finder",
+  "version": "1.0.0",
+  "description": "Find available parking spots with location-based search and real-time availability indicators",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "cd client && npm run dev",
+    "server": "cd server && npm run dev",
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "seed": "cd server && node utils/seedData.js",
+    "build": "cd client && npm run build"
+  },
+  "keywords": ["parking", "lot", "finder", "react", "express", "mongodb"],
+  "author": "Sarath",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

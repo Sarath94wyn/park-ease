@@ -1,0 +1,219 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Premium Centralized Theme Configuration Variables (Google Maps & Apple Minimalist) */
+:root {
+  /* Main palette */
+  --bg-app: #FFFFFF;                /* Pure White */
+  --bg-secondary: #F8F9FA;          /* Secondary gray background */
+  --bg-card: #FFFFFF;               /* Card background */
+  --border-app: #E8EAED;            /* Google-Maps divider border */
+  --border-input: #DADCE0;          /* Google-Maps input border */
+  
+  /* Typography */
+  --text-main: #202124;             /* Primary Text */
+  --text-muted: #5F6368;            /* Secondary Text */
+  
+  /* Buttons and accents */
+  --btn-primary-bg: #000000;
+  --btn-primary-hover: #1F1F1F;
+  --btn-secondary-border: #DADCE0;
+  
+  /* Selected & Hover states */
+  --state-selected: #F1F3F4;
+  --state-hover: #F8F9FA;
+  
+  --shadow-subtle: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --shadow-glass: 0 1px 3px 0 rgba(60, 64, 67, 0.15), 0 4px 8px 3px rgba(60, 64, 67, 0.08);
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-white text-slate-900;
+  }
+
+  * {
+    @apply box-border;
+  }
+}
+
+@layer components {
+  /* Translucent Google-Maps Glass Cards */
+  .glass-card {
+    @apply bg-white border border-slate-200 shadow-sm rounded-2xl;
+  }
+
+  .glass-card-dark {
+    @apply bg-white border border-slate-200 shadow-sm rounded-2xl;
+  }
+
+  /* Black Gradient Accents (Selected sections only) */
+  .gradient-primary {
+    background: linear-gradient(135deg, #000000 0%, #1A1A1A 100%) !important;
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, #111111 0%, #2D2D2D 100%) !important;
+  }
+
+  /* Subtle background gradient for highlighted panels or welcome cards */
+  .gradient-hero {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%) !important;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-black to-slate-700 bg-clip-text text-transparent;
+  }
+
+  /* Premium Solid Black Buttons */
+  .btn-primary {
+    @apply bg-black hover:bg-slate-900 text-white font-semibold rounded-xl
+           shadow-sm active:scale-[0.98] transition-all duration-300 ease-out
+           px-6 py-3 inline-flex items-center justify-center gap-2 border border-black;
+  }
+
+  /* Clean Secondary Outline Buttons */
+  .btn-outline {
+    @apply border border-slate-300 text-slate-900 bg-white font-semibold rounded-xl
+           hover:bg-slate-50 active:scale-[0.98]
+           transition-all duration-300 ease-out
+           px-6 py-3 inline-flex items-center justify-center gap-2;
+  }
+
+  /* Minimalist Input Box */
+  .input-field {
+    @apply bg-white border border-slate-300 rounded-xl px-4 py-3
+           text-slate-900 placeholder-slate-400 font-medium
+           focus:border-black focus:ring-4 focus:ring-black/5
+           focus:outline-none transition-all duration-300 w-full;
+  }
+
+  /* Leaflet Overrides (Google Maps Light styling) */
+  .leaflet-container {
+    @apply rounded-2xl font-sans;
+    background: #f8f9fa;
+  }
+
+  .leaflet-popup-content-wrapper {
+    @apply bg-white rounded-xl border border-slate-200 shadow-lg text-slate-800;
+  }
+
+  .leaflet-popup-content {
+    @apply text-sm text-slate-700 m-0 p-3;
+  }
+
+  .leaflet-popup-tip {
+    background: #ffffff;
+  }
+
+  .leaflet-control-zoom a {
+    @apply bg-white text-slate-700 border-slate-200 hover:bg-slate-100;
+  }
+
+  .leaflet-control-attribution {
+    @apply bg-white/80 text-slate-400 text-xs;
+  }
+
+  /* High-Contrast Parking Slot grid colors */
+  .slot-available {
+    @apply bg-emerald-50 border border-emerald-300 text-emerald-700
+           hover:bg-emerald-100 hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-500/10
+           cursor-pointer transition-all duration-200 font-bold;
+  }
+
+  .slot-occupied {
+    @apply bg-slate-50 border border-slate-200 text-slate-400
+           cursor-not-allowed opacity-50 font-bold;
+  }
+
+  /* Selected spot is solid black with white text */
+  .slot-selected {
+    @apply bg-black border-2 border-black text-white
+           shadow-md ring-2 ring-black/10
+           scale-105 transition-all duration-200 font-black;
+  }
+
+  .slot-handicap {
+    @apply bg-blue-50 border border-blue-200 text-blue-600 font-bold;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8f9fa;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.leaflet-default-icon-path {
+  background-image: url('https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png');
+}
+
+/* User location pulsator */
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.user-location-pulse {
+  animation: pulseRing 2s ease-out infinite;
+}
+
+/* Chat typing bounce */
+@keyframes typingDot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-8px);
+  }
+}
+
+.typing-dot:nth-child(1) { animation: typingDot 1.4s ease-in-out infinite 0s; }
+.typing-dot:nth-child(2) { animation: typingDot 1.4s ease-in-out infinite 0.2s; }
+.typing-dot:nth-child(3) { animation: typingDot 1.4s ease-in-out infinite 0.4s; }
+
+/* Premium Smart Mobility Background Pattern */
+.bg-mobility-pattern {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(248, 249, 250, 0.92)), url('/parking_mobility_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
