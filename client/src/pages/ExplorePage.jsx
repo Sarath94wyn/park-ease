@@ -18,6 +18,7 @@ export default function ExplorePage() {
   const searchLat = searchParams.get('lat');
   const searchLng = searchParams.get('lng');
   const searchName = searchParams.get('name');
+  const searchRadius = searchParams.get('radius');
 
   // Filters state
   const [filters, setFilters] = useState({
@@ -42,14 +43,14 @@ export default function ExplorePage() {
       const lng = parseFloat(searchLng);
       setMapCenter([lat, lng]);
       setMapZoom(14);
-      fetchParkingLots({ lat, lng, radius: 5000, ...filters });
+      fetchParkingLots({ lat, lng, radius: searchRadius || 5000, ...filters });
     } else if (position) {
       setMapCenter([position.lat, position.lng]);
-      fetchParkingLots({ lat: position.lat, lng: position.lng, radius: 8000, ...filters });
+      fetchParkingLots({ lat: position.lat, lng: position.lng, radius: searchRadius || 8000, ...filters });
     } else {
       fetchParkingLots(filters);
     }
-  }, [searchLat, searchLng, position]);
+  }, [searchLat, searchLng, position, searchRadius]);
 
   const handleApplyFilters = (updatedFilters) => {
     setFilters(updatedFilters);
@@ -70,6 +71,10 @@ export default function ExplorePage() {
       params.lng = position.lng;
     }
 
+    if (searchRadius) {
+      params.radius = searchRadius;
+    }
+
     fetchParkingLots(params);
   };
 
@@ -85,6 +90,11 @@ export default function ExplorePage() {
       params.lat = position.lat;
       params.lng = position.lng;
     }
+
+    if (searchRadius) {
+      params.radius = searchRadius;
+    }
+
     fetchParkingLots(params);
     toast.success('Filters cleared');
   };

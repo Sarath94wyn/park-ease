@@ -27,5 +27,8 @@ npm-debug.log*
 # Coverage
 coverage/
 
-# MongoDB local database
+# MongoDB database files
 db/
+*.wt
+WiredTiger*
+journal/

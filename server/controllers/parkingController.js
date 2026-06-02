@@ -39,6 +39,7 @@ const getAllParkingLots = async (req, res, next) => {
       search,
       lat,
       lng,
+      radius,
       page = 1,
       limit = 10,
     } = req.query;
@@ -74,7 +75,24 @@ const getAllParkingLots = async (req, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
     let sortOption = { createdAt: -1 };
 
-    // If lat/lng provided, sort by distance using $near
+    // Parse dynamic radius: supporting km, m suffixes, or numbers
+    let maxDistance = 5000; // Default 5 km
+    if (radius) {
+      const radiusStr = String(radius).toLowerCase().trim();
+      if (radiusStr.endsWith('km')) {
+        maxDistance = parseFloat(radiusStr) * 1000;
+      } else if (radiusStr.endsWith('m')) {
+        maxDistance = parseFloat(radiusStr);
+      } else {
+        const parsed = parseFloat(radiusStr);
+        if (!isNaN(parsed)) {
+          // If the parsed number is small (e.g. <= 100), assume it's in kilometers, otherwise meters
+          maxDistance = parsed <= 100 ? parsed * 1000 : parsed;
+        }
+      }
+    }
+
+    // If lat/lng provided, sort by distance using $near and filter within maxDistance
     if (lat && lng) {
       query.location = {
         $near: {
@@ -82,15 +100,28 @@ const getAllParkingLots = async (req, res, next) => {
             type: 'Point',
             coordinates: [Number(lng), Number(lat)],
           },
+          $maxDistance: maxDistance,
         },
       };
       // $near implicitly sorts by distance, so remove other sorts
       sortOption = {};
     }
 
-    const total = await ParkingLot.countDocuments(
-      lat && lng ? { ...query, location: undefined, isActive: true } : query
-    );
+    // Construct high-accuracy total count query (using $geoWithin since countDocuments doesn't support $near)
+    let countQuery = { ...query };
+    if (lat && lng) {
+      const radiusInRadians = maxDistance / 6378100;
+      countQuery.location = {
+        $geoWithin: {
+          $centerSphere: [
+            [Number(lng), Number(lat)],
+            radiusInRadians,
+          ],
+        },
+      };
+    }
+
+    const total = await ParkingLot.countDocuments(countQuery);
 
     const parkingLots = await ParkingLot.find(query)
       .sort(sortOption)
@@ -147,7 +178,7 @@ const getParkingLotById = async (req, res, next) => {
  */
 const getNearbyParkingLots = async (req, res, next) => {
   try {
-    const { lat, lng, radius = 5000 } = req.query;
+    const { lat, lng, radius } = req.query;
 
     if (!lat || !lng) {
       return res.status(400).json({
@@ -156,9 +187,26 @@ const getNearbyParkingLots = async (req, res, next) => {
       });
     }
 
+    // Parse dynamic radius: supporting km, m suffixes, or numbers
+    let maxDistance = 5000; // Default 5 km
+    if (radius) {
+      const radiusStr = String(radius).toLowerCase().trim();
+      if (radiusStr.endsWith('km')) {
+        maxDistance = parseFloat(radiusStr) * 1000;
+      } else if (radiusStr.endsWith('m')) {
+        maxDistance = parseFloat(radiusStr);
+      } else {
+        const parsed = parseFloat(radiusStr);
+        if (!isNaN(parsed)) {
+          // If the parsed number is small (e.g. <= 100), assume it's in kilometers, otherwise meters
+          maxDistance = parsed <= 100 ? parsed * 1000 : parsed;
+        }
+      }
+    }
+
     // Convert radius from meters to radians for $centerSphere
     // Earth's radius ≈ 6378100 meters
-    const radiusInRadians = Number(radius) / 6378100;
+    const radiusInRadians = maxDistance / 6378100;
 
     const parkingLots = await ParkingLot.find({
       isActive: true,
