@@ -3,6 +3,7 @@ import { Star, Clock, MapPin, Sparkles, Navigation, Heart } from 'lucide-react';
 import SlotGrid from './SlotGrid';
 import { AMENITY_ICONS } from '../../utils/constants';
 import * as LucideIcons from 'lucide-react';
+import { getParkingImageUrl } from '../../utils/helpers';
 
 export default function ParkingDetails({
   lot,
@@ -23,8 +24,11 @@ export default function ParkingDetails({
 
   return (
     <div className="glass-card text-slate-900 overflow-hidden shadow-2xl rounded-3xl border border-slate-200">
-      {/* Visual Header / Premium Gradient Background Banner */}
-      <div className="relative h-48 bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 flex items-end p-6 border-b border-slate-700/30">
+      {/* Visual Header / Dynamic Premium Cover Background with Gradient Overlay */}
+      <div 
+        className="relative h-48 bg-cover bg-center flex items-end p-6 border-b border-slate-700/30"
+        style={{ backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.85)), url(${lot.images?.[0] || getParkingImageUrl(lot.name)})` }}
+      >
         <div className="absolute top-4 right-4 flex gap-2">
           {/* Favorite button */}
           <button
@@ -110,6 +114,60 @@ export default function ParkingDetails({
                   <span>{amenity}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Vehicle Category Capacity */}
+        {lot.slots && (
+          <div className="space-y-3 border-t border-slate-700/30 pt-5">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">Parking Capacity by Vehicle Category</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(() => {
+                const categories = {
+                  twoWheeler: { total: 0, available: 0, label: '2 Wheelers', sub: 'Bikes & Scooters', icon: <LucideIcons.Bike className="w-5 h-5 text-cyan-600" />, types: ['compact'] },
+                  fourWheeler: { total: 0, available: 0, label: '4 Wheelers', sub: 'Cars & SUVs', icon: <LucideIcons.Car className="w-5 h-5 text-indigo-500" />, types: ['standard', 'ev'] },
+                  heavyVehicle: { total: 0, available: 0, label: 'Heavy Vehicles', sub: '6+ Wheelers / Trucks', icon: <LucideIcons.Truck className="w-5 h-5 text-amber-600" />, types: ['large'] },
+                  handicap: { total: 0, available: 0, label: 'Handicap Access', sub: 'Specially Abled', icon: <LucideIcons.Accessibility className="w-5 h-5 text-rose-500" />, types: ['handicap'] },
+                };
+
+                lot.slots.forEach(slot => {
+                  const type = slot.type;
+                  let target = null;
+                  if (categories.twoWheeler.types.includes(type)) target = categories.twoWheeler;
+                  else if (categories.fourWheeler.types.includes(type)) target = categories.fourWheeler;
+                  else if (categories.heavyVehicle.types.includes(type)) target = categories.heavyVehicle;
+                  else if (categories.handicap.types.includes(type)) target = categories.handicap;
+
+                  if (target) {
+                    target.total++;
+                    if (!slot.isOccupied) target.available++;
+                  }
+                });
+
+                return Object.entries(categories).map(([key, cat]) => (
+                  <div key={key} className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl flex flex-col justify-between space-y-2 hover:border-slate-350 transition-colors shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 bg-white rounded-xl border border-slate-200/80">
+                        {cat.icon}
+                      </div>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        cat.available > 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-rose-500/10 text-rose-700'
+                      }`}>
+                        {cat.available} Free
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-900 leading-none">{cat.label}</h4>
+                      <p className="text-[9px] text-slate-500 mt-0.5 font-medium">{cat.sub}</p>
+                    </div>
+                    <div className="text-[10px] text-slate-600 font-semibold border-t border-slate-200/60 pt-1.5 flex justify-between items-center">
+                      <span>Total capacity:</span>
+                      <span className="font-bold text-slate-900">{cat.total} spots</span>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         )}

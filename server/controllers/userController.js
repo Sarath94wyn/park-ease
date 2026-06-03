@@ -100,10 +100,12 @@ const getFavorites = async (req, res, next) => {
         match: { isActive: true },
       });
 
+    const activeFavorites = (user.favorites || []).filter(f => f !== null);
+
     res.status(200).json({
       success: true,
-      count: user.favorites.length,
-      data: user.favorites,
+      count: activeFavorites.length,
+      data: activeFavorites,
     });
   } catch (error) {
     next(error);

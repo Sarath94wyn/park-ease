@@ -1,16 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import UserBookings from '../components/dashboard/UserBookings';
 import FavoritesList from '../components/dashboard/FavoritesList';
 import ProfileCard from '../components/dashboard/ProfileCard';
 import RewardsHub from '../components/dashboard/RewardsHub';
-import { Ticket, Heart, User, Sparkles, Gift, LogOut } from 'lucide-react';
+import { Ticket, Heart, User, Sparkles, Gift, LogOut, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useGeolocation from '../hooks/useGeolocation';
+import LocationPermissionModal from '../components/common/LocationPermissionModal';
+import LocationSearch from '../components/map/LocationSearch';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('bookings'); // bookings | favorites | rewards | profile
+  
+  const { position, permissionState, getCurrentPosition, checkPermission } = useGeolocation();
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
+  useEffect(() => {
+    if (permissionState === 'denied' || permissionState === 'prompt') {
+      setShowLocationModal(true);
+    } else {
+      setShowLocationModal(false);
+    }
+  }, [permissionState]);
+
+  const handleUseMyLocation = () => {
+    getCurrentPosition();
+    if (position && position.lat != null && position.lng != null && !isNaN(position.lat) && !isNaN(position.lng)) {
+      navigate(`/explore?lat=${position.lat}&lng=${position.lng}&name=${encodeURIComponent('Your Location')}`);
+    } else {
+      navigate('/explore');
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -64,6 +87,50 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Find Parking Search Box */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative z-30 select-none animate-fade-in">
+          <div className="absolute top-[-50%] right-[-10%] w-72 h-72 bg-primary-600/5 rounded-full blur-[100px] pointer-events-none"></div>
+          <div className="max-w-xl space-y-3 relative z-10">
+            <span className="text-[9px] uppercase font-black bg-indigo-500/10 border border-indigo-500/25 text-indigo-700 px-2.5 py-1 rounded-full flex items-center gap-1.5 w-fit">
+              <MapPin className="w-3 h-3 text-indigo-600" />
+              <span>Quick Search</span>
+            </span>
+            <h3 className="text-lg font-black tracking-tight text-slate-900">
+              Find Available Parking Lots
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+              Search by city, landmark, or specific parking plaza to check real-time slot availability, reserve a spot, and get navigation directions.
+            </p>
+            <div className="pt-2">
+               <LocationSearch
+                onSelect={(coords, name) => {
+                  let lat, lng;
+                  if (Array.isArray(coords)) {
+                    lng = parseFloat(coords[0]);
+                    lat = parseFloat(coords[1]);
+                  } else if (coords && typeof coords === 'object') {
+                    const location = coords.location || {};
+                    if (Array.isArray(location.coordinates)) {
+                      lng = parseFloat(location.coordinates[0]);
+                      lat = parseFloat(location.coordinates[1]);
+                    } else {
+                      lat = parseFloat(coords.latitude || coords.lat);
+                      lng = parseFloat(coords.longitude || coords.lng);
+                    }
+                  }
+                  if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) {
+                    navigate(`/explore?lat=${lat}&lng=${lng}&name=${encodeURIComponent(name || (coords && coords.name) || 'searched location')}`);
+                  } else {
+                    navigate('/explore');
+                  }
+                }}
+                onUseMyLocation={handleUseMyLocation}
+                userPosition={position}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Navigation tabs */}
         <div className="flex gap-4 border-b border-slate-200 pb-1 overflow-x-auto scrollbar-none select-none">
           {TABS_CONFIG.map((tab) => (
@@ -91,6 +158,16 @@ export default function DashboardPage() {
           {activeTab === 'profile' && <ProfileCard />}
         </div>
       </div>
+
+      <LocationPermissionModal
+        isOpen={showLocationModal}
+        permissionState={permissionState}
+        onRequestLocation={() => {
+          getCurrentPosition();
+          checkPermission();
+        }}
+        onClose={() => setShowLocationModal(false)}
+      />
     </div>
   );
 }

@@ -41,7 +41,7 @@ const getAllParkingLots = async (req, res, next) => {
       lng,
       radius,
       page = 1,
-      limit = 10,
+      limit = 100,
     } = req.query;
 
     const query = { isActive: true };
@@ -76,7 +76,7 @@ const getAllParkingLots = async (req, res, next) => {
     let sortOption = { createdAt: -1 };
 
     // Parse dynamic radius: supporting km, m suffixes, or numbers
-    let maxDistance = 5000; // Default 5 km
+    let maxDistance = 500000; // Default 500 km
     if (radius) {
       const radiusStr = String(radius).toLowerCase().trim();
       if (radiusStr.endsWith('km')) {
@@ -188,7 +188,7 @@ const getNearbyParkingLots = async (req, res, next) => {
     }
 
     // Parse dynamic radius: supporting km, m suffixes, or numbers
-    let maxDistance = 5000; // Default 5 km
+    let maxDistance = 500000; // Default 500 km
     if (radius) {
       const radiusStr = String(radius).toLowerCase().trim();
       if (radiusStr.endsWith('km')) {
@@ -251,8 +251,11 @@ const searchParkingLots = async (req, res, next) => {
       $or: [
         { name: { $regex: q, $options: 'i' } },
         { address: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
       ],
-    }).select('-slots -__v');
+    })
+      .limit(15)
+      .select('-slots -__v');
 
     res.status(200).json({
       success: true,

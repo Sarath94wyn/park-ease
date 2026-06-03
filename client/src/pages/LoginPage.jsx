@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { Car, Mail, Lock, User, Sparkles, Navigation, ArrowRight, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
-  const { login, register, isAuthenticated, loading } = useAuth();
+  const { login, register, googleLogin, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      if (credentialResponse.credential) {
+        await googleLogin(credentialResponse.credential);
+        navigate('/dashboard');
+      } else {
+        toast.error('Google login did not return valid credentials');
+      }
+    } catch (err) {
+      // Errors handled by AuthContext toast
+    }
+  };
 
   // Active form tab: 'signin' | 'signup'
   const [activeTab, setActiveTab] = useState('signin');
@@ -216,25 +230,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Seeded credentials helper */}
-                <div className="bg-white/80 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 space-y-2.5 leading-relaxed">
-                  <div className="flex items-center gap-2 text-cyan-600 font-extrabold">
-                    <Sparkles className="w-4 h-4" />
-                    <span>Quick Seeded Test Credentials</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-medium text-slate-600">
-                    <div className="bg-slate-100/40 p-2 rounded-lg border border-slate-200">
-                      <span className="text-[10px] uppercase font-bold text-slate-600 block mb-0.5">Admin Account</span>
-                      <code className="text-cyan-600 font-extrabold select-all block text-xs">admin@parkinglot.com</code>
-                      <span className="text-slate-600 mt-0.5 block">Pass: <code className="text-slate-700 font-bold">password</code></span>
-                    </div>
-                    <div className="bg-slate-100/40 p-2 rounded-lg border border-slate-200">
-                      <span className="text-[10px] uppercase font-bold text-slate-600 block mb-0.5">Regular Account</span>
-                      <code className="text-cyan-600 font-extrabold select-all block text-xs">user@parkinglot.com</code>
-                      <span className="text-slate-600 mt-0.5 block">Pass: <code className="text-slate-700 font-bold">password</code></span>
-                    </div>
-                  </div>
-                </div>
+
 
                 <button
                   type="submit"
@@ -308,6 +304,27 @@ export default function LoginPage() {
                 </button>
               </form>
             )}
+
+            {/* Divider */}
+            <div className="relative flex items-center justify-center my-4 select-none">
+              <div className="border-t border-slate-200 w-full"></div>
+              <span className="absolute bg-white px-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest">or continue with</span>
+            </div>
+
+            {/* Google Authentication Button */}
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={(credentialResponse) => handleGoogleSuccess(credentialResponse)}
+                onError={() => {
+                  toast.error('Google Sign-In failed');
+                }}
+                useOneTap
+                theme="outline"
+                size="large"
+                width="100%"
+                shape="pill"
+              />
+            </div>
           </div>
         </div>
       </div>

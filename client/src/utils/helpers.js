@@ -121,3 +121,43 @@ export const getStatusColor = (status) => {
       return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
   }
 };
+
+export const getParkingImageUrl = (name) => {
+  const lotName = name?.toLowerCase() || '';
+  
+  // Real parking images uploaded by user (copied to public/parking_slots/)
+  const images = {
+    lot1: '/parking_slots/parking_lot_1.jpg', // Crowded outdoor parking lot (high angle)
+    lot2: '/parking_slots/parking_lot_2.jpg', // Underground garage (G zone blue columns)
+    lot3: '/parking_slots/parking_lot_3.jpg', // Red brick outdoor parking slots (empty slots)
+    lot4: '/parking_slots/parking_lot_4.jpg', // Indoor modern underground parking with green guide lines
+    lot5: '/parking_slots/parking_lot_5.jpg', // Outdoor parking lot with yellow slots
+  };
+
+  if (lotName.includes('mall') || lotName.includes('phoenix') || lotName.includes('lulu') || lotName.includes('focus')) {
+    return images.lot4; // Indoor modern garage
+  }
+  if (lotName.includes('metro') || lotName.includes('underground') || lotName.includes('basement')) {
+    return images.lot2; // Underground deck
+  }
+  if (lotName.includes('station') || lotName.includes('terminus') || lotName.includes('hub') || lotName.includes('central')) {
+    return images.lot1; // Crowded transit lot
+  }
+  if (lotName.includes('beach') || lotName.includes('fort kochi') || lotName.includes('open') || lotName.includes('ground')) {
+    return images.lot3; // Brick outdoor lot
+  }
+  if (lotName.includes('infopark') || lotName.includes('itpl') || lotName.includes('cyberpark') || lotName.includes('technopark')) {
+    return images.lot5; // Yellow slot IT park lot
+  }
+  if (lotName.includes('premium') || lotName.includes('kowdiar') || lotName.includes('plaza')) {
+    return images.lot4; // Modern indoor
+  }
+
+  // Fallback based on name length for variety
+  const code = lotName.length % 5;
+  if (code === 0) return images.lot1;
+  if (code === 1) return images.lot2;
+  if (code === 2) return images.lot3;
+  if (code === 3) return images.lot4;
+  return images.lot5;
+};

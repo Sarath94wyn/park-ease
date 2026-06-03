@@ -10,6 +10,11 @@ export const login = async (credentials) => {
   return data;
 };
 
+export const loginWithGoogle = async (googleToken) => {
+  const { data } = await api.post('/auth/google', { token: googleToken });
+  return data;
+};
+
 export const getMe = async () => {
   const { data } = await api.get('/auth/me');
   return data;

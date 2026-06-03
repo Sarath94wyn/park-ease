@@ -21,13 +21,13 @@ export default function ParkingDetailPage() {
     try {
       setLoading(true);
       const lotData = await getParkingLotById(id);
-      setLot(lotData.parkingLot || lotData);
+      setLot(lotData.parkingLot || lotData.data || lotData);
 
       // Check if favorited if logged in
       if (isAuthenticated) {
         const favsData = await getFavorites();
-        const favs = favsData.favorites || favsData;
-        const exists = favs.some(f => f._id === id);
+        const favs = favsData.favorites || favsData.data || (Array.isArray(favsData) ? favsData : []);
+        const exists = favs.some(f => f && (f._id || f.id) === id);
         setIsFavorite(exists);
       }
     } catch (e) {

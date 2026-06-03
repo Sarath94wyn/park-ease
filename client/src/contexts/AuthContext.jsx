@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { login as apiLogin, register as apiRegister, getMe } from '../services/authService';
+import { login as apiLogin, register as apiRegister, getMe, loginWithGoogle as apiGoogleLogin } from '../services/authService';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
@@ -104,6 +104,36 @@ export function AuthProvider({ children }) {
     toast.success('Logged out successfully');
   };
 
+  const googleLogin = async (googleToken) => {
+    try {
+      setLoading(true);
+      const res = await apiGoogleLogin(googleToken);
+      const data = res.data || res;
+
+      const token = data.accessToken || data.token;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+
+      const userData = data.user || data;
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      toast.success(`Welcome back, ${userData.name || 'User'}!`);
+      return userData;
+    } catch (error) {
+      console.error('Google login failed:', error);
+      const errMsg = error.response?.data?.message || 'Google login failed. Try again.';
+      toast.error(errMsg);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -111,6 +141,7 @@ export function AuthProvider({ children }) {
     isAdmin,
     login,
     register,
+    googleLogin,
     logout,
     checkAuth,
   };

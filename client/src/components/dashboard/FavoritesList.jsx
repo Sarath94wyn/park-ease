@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getFavorites, removeFavorite } from '../../services/userService';
 import ParkingCard from '../parking/ParkingCard';
 import toast from 'react-hot-toast';
 
 export default function FavoritesList() {
+  const navigate = useNavigate();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -11,7 +13,8 @@ export default function FavoritesList() {
     try {
       setLoading(true);
       const data = await getFavorites();
-      setFavorites(data.favorites || data);
+      const list = data.data || data.favorites || (Array.isArray(data) ? data : []);
+      setFavorites(list.filter(f => f !== null && f !== undefined));
     } catch (e) {
       console.error('Error fetching favorites:', e);
       toast.error('Failed to load favorites');
@@ -60,7 +63,7 @@ export default function FavoritesList() {
         <ParkingCard
           key={lot._id}
           lot={lot}
-          onSelect={() => window.location.href = `/parking/${lot._id}`}
+          onSelect={() => navigate(`/parking/${lot._id}`)}
           onFavorite={() => handleFavoriteToggle(lot._id)}
           isFavorite={true}
         />

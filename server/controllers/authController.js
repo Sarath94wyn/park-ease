@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const config = require('../config/env');
 const { generateAccessToken, generateRefreshToken } = require('../utils/generateToken');
+
+// Initialize Google OAuth2 Client
+const googleClient = new OAuth2Client(config.googleClientId);
 
 /**
  * @desc    Register a new user with standard email and password
@@ -195,6 +199,98 @@ const refreshToken = async (req, res, next) => {
 };
 
 /**
+ * @desc    Authenticate user via Google OAuth 2.0
+ * @route   POST /api/auth/google
+ * @access  Public
+ */
+const googleLogin = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google token is required',
+      });
+    }
+
+    // Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: config.googleClientId,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google account does not supply email privileges',
+      });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create a new user with generated secure random password to satisfy Schema validation
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        avatar: picture || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`,
+        password: Math.random().toString(36).slice(-16),
+        role: 'user',
+      });
+    } else {
+      // Update missing Google credentials or picture
+      let changed = false;
+      if (!user.googleId) {
+        user.googleId = googleId;
+        changed = true;
+      }
+      if (picture && user.avatar !== picture) {
+        user.avatar = picture;
+        changed = true;
+      }
+      if (changed) {
+        await user.save();
+      }
+    }
+
+    // Generate credentials tokens
+    const accessToken = generateAccessToken(user._id, user.role);
+    const refreshToken = generateRefreshToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Google login successful',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          role: user.role,
+          phone: user.phone,
+          points: user.points,
+          favorites: user.favorites || [],
+        },
+        accessToken,
+        refreshToken,
+      },
+    });
+  } catch (error) {
+    console.error('Google verification error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid Google Identity token',
+    });
+  }
+};
+
+/**
  * @desc    Logout (client-side token clearing)
  * @route   POST /api/auth/logout
  * @access  Public
@@ -206,4 +302,4 @@ const logout = async (req, res) => {
   });
 };
 
-module.exports = { register, login, getMe, refreshToken, logout };
+module.exports = { register, login, googleLogin, getMe, refreshToken, logout };

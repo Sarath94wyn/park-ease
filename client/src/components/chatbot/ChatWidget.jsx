@@ -6,7 +6,7 @@ export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end">
       {/* Expandable chat window */}
       {isOpen && (
         <div className="mb-4 animate-slide-up w-[90vw] sm:w-[380px] h-[550px] shadow-2xl rounded-3xl overflow-hidden border border-slate-200/80">

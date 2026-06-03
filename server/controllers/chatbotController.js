@@ -46,23 +46,37 @@ const handleMessage = async (req, res, next) => {
     // Search / Find intent
     else if (/\b(find|search|parking near|look for|where|locate)\b/.test(lowerMsg)) {
       // Try to extract a location keyword from the message
-      const locationKeywords = lowerMsg
+      let locationKeywords = lowerMsg
         .replace(/\b(find|search|parking|near|lot|lots|me|in|at|around|for)\b/g, '')
         .trim();
 
-      if (locationKeywords.length > 1) {
+      // Normalize common variations and typos
+      let normalizedQuery = locationKeywords;
+      if (/\b(trivandrum|trivndrum|trivandrm|tvm|thiruvananthapuram)\b/.test(lowerMsg)) {
+        normalizedQuery = 'Thiruvananthapuram';
+      } else if (/\b(kochi|cochin|ernakulam|kakkanad)\b/.test(lowerMsg)) {
+        normalizedQuery = 'Kochi';
+      } else if (/\b(kozhikode|calicut)\b/.test(lowerMsg)) {
+        normalizedQuery = 'Kozhikode';
+      } else if (/\b(bangalore|bengaluru|blr)\b/.test(lowerMsg)) {
+        normalizedQuery = 'Bangalore';
+      } else if (/\b(chennai|madras)\b/.test(lowerMsg)) {
+        normalizedQuery = 'Chennai';
+      }
+
+      if (normalizedQuery.length > 1) {
         const lots = await ParkingLot.find({
           isActive: true,
           $or: [
-            { name: { $regex: locationKeywords, $options: 'i' } },
-            { address: { $regex: locationKeywords, $options: 'i' } },
+            { name: { $regex: normalizedQuery, $options: 'i' } },
+            { address: { $regex: normalizedQuery, $options: 'i' } },
           ],
         })
           .limit(3)
-          .select('name address pricePerHour availableSlots rating');
+          .select('name address pricePerHour availableSlots rating location');
 
         if (lots.length > 0) {
-          reply = `🅿️ I found ${lots.length} parking lot(s) matching "${locationKeywords}":\n\n`;
+          reply = `🅿️ I found ${lots.length} parking lot(s) matching "${normalizedQuery}":\n\n`;
           lots.forEach((lot, i) => {
             reply += `${i + 1}. **${lot.name}**\n`;
             reply += `   📍 ${lot.address}\n`;
@@ -70,14 +84,14 @@ const handleMessage = async (req, res, next) => {
           });
           data = lots;
         } else {
-          reply = `😕 I couldn't find any parking lots matching "${locationKeywords}". Try searching for a city name like "Kochi", "Bangalore", or "Chennai".`;
+          reply = `😕 I couldn't find any parking lots matching "${locationKeywords}". Try searching for a city name like "Kochi", "Trivandrum", "Kozhikode", "Bangalore", or "Chennai".`;
         }
       } else {
         reply =
           '🔍 Sure! Please tell me the area or city where you\'re looking for parking.\n\n' +
           'For example: "Find parking near MG Road" or "Search parking in Kochi"';
       }
-      suggestions = ['Show all parking lots', 'Parking in Kochi', 'Parking in Bangalore'];
+      suggestions = ['Show all parking lots', 'Parking in Kochi', 'Parking in Trivandrum'];
     }
     // Availability intent
     else if (/\b(available|availability|vacant|empty|free|open)\b/.test(lowerMsg)) {
@@ -148,17 +162,43 @@ const handleMessage = async (req, res, next) => {
         'Refunds are processed automatically upon cancellation.';
       suggestions = ['Go to dashboard', 'How do I book?', 'Find parking'];
     }
+    // Support / Customer ticket query registration
+    else if (lowerMsg.startsWith('query:')) {
+      const queryText = message.substring(6).trim();
+      if (queryText.length > 3) {
+        const Query = require('../models/Query');
+        const loggedQuery = await Query.create({
+          name: req.user ? req.user.name : 'Anonymous Guest',
+          email: req.user ? req.user.email : 'guest@parkinglot.com',
+          message: queryText,
+          user: req.user ? req.user._id : null
+        });
+        reply = `✅ Your support query has been logged successfully!\n\n"${queryText}"\n\nOur administrative team will review it shortly. Ticket ID: ${loggedQuery._id.toString().slice(-6).toUpperCase()}`;
+      } else {
+        reply = '⚠️ Please provide a message after "query:". For example: "query: elevator not working in Block A".';
+      }
+      suggestions = ['Show all parking lots', 'Help'];
+    }
+    else if (/\b(support|issue|problem|ticket|complaint|contact|admin|helpdesk)\b/.test(lowerMsg)) {
+      reply =
+        '🎫 Need support? I can register a customer ticket directly for you!\n\n' +
+        'Simply type **query: <your message>** and press Enter.\n\n' +
+        'Example:\n' +
+        '*query: EV charger at Lulu Mall is showing error code 4*';
+      suggestions = ['query: Elevator not working', 'Help'];
+    }
     // Help intent
-    else if (/\b(help|support|what can you do|commands|options)\b/.test(lowerMsg)) {
+    else if (/\b(help|what can you do|commands|options)\b/.test(lowerMsg)) {
       reply =
         '🤖 Here\'s what I can help you with:\n\n' +
         '🔍 **Find parking** — "Find parking near MG Road"\n' +
         '📋 **Check availability** — "Show available parking"\n' +
         '💰 **Get prices** — "What\'s the price at Lulu Mall?"\n' +
         '📖 **Book a slot** — "How do I book?"\n' +
+        '🎫 **Submit Query** — "I need support"\n' +
         '❌ **Cancel booking** — "How to cancel?"\n\n' +
         'Just type your question naturally!';
-      suggestions = ['Find parking', 'Show available', 'Prices', 'How to book?'];
+      suggestions = ['Find parking', 'Show available', 'Prices', 'Help'];
     }
     // Default fallback
     else {

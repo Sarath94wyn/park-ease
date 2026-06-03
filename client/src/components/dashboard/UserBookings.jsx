@@ -23,7 +23,7 @@ export default function UserBookings() {
     try {
       setLoading(true);
       const data = await getUserBookings();
-      setBookings(data.bookings || data);
+      setBookings(data.data || data.bookings || (Array.isArray(data) ? data : []));
     } catch (e) {
       console.error('Error fetching bookings:', e);
       toast.error('Failed to load bookings');

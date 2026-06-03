@@ -1,5 +1,5 @@
 import { Heart, MapPin, Star, Clock, Zap, Shield, Camera, Wifi } from 'lucide-react';
-import { formatCurrency, getAvailabilityColor, getAvailabilityText, getDistanceText } from '../../utils/helpers';
+import { formatCurrency, getAvailabilityColor, getAvailabilityText, getDistanceText, getParkingImageUrl } from '../../utils/helpers';
 
 const amenityIconMap = {
   cctv: Camera,
@@ -25,17 +25,11 @@ export default function ParkingCard({ lot, onSelect, onFavorite, isFavorite = fa
     >
       {/* Header / Image area */}
       <div className="relative h-36 bg-gradient-to-br from-primary-600/40 to-cyan-600/20 overflow-hidden">
-        {lot.images?.[0] ? (
-          <img
-            src={lot.images[0]}
-            alt={lot.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <MapPin className="w-12 h-12 text-primary-300/30" />
-          </div>
-        )}
+        <img
+          src={lot.images?.[0] || getParkingImageUrl(lot.name)}
+          alt={lot.name}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+        />
 
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />

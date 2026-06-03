@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, X, Bot, User, CornerDownLeft, Sparkles } from 'lucide-react';
+import { Send, X, Bot, User, CornerDownLeft, Sparkles, Mic, MicOff, MapPin, Compass } from 'lucide-react';
 import { sendMessage } from '../../services/chatbotService';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const SUGGESTIONS = [
   "Find parking in Kochi",
   "Available lots in Trivandrum",
-  "How much is City Center Parking?",
+  "How much is Lulu Mall Parking?",
   "How to book a slot?",
   "What is available right now?",
 ];
@@ -21,7 +22,10 @@ export default function ChatWindow({ onClose }) {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,6 +34,55 @@ export default function ChatWindow({ onClose }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
+
+  // Initialize Web Speech API
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.lang = 'en-US';
+      rec.interimResults = false;
+
+      rec.onstart = () => {
+        setIsListening(true);
+        toast.success("Listening... Speak now!");
+      };
+
+      rec.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsListening(false);
+        toast.success("Speech captured!");
+      };
+
+      rec.onerror = (e) => {
+        console.error('Speech recognition error:', e);
+        setIsListening(false);
+        toast.error("Could not capture speech. Try again.");
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast.error("Speech recognition is not supported in this browser. Try Chrome, Edge or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      setInput('');
+      recognitionRef.current.start();
+    }
+  };
 
   const handleSend = async (textToSend) => {
     const cleanText = textToSend || input.trim();
@@ -43,12 +96,14 @@ export default function ChatWindow({ onClose }) {
 
     try {
       const response = await sendMessage(cleanText);
+      const chatData = response.data || response;
       
       // Append bot response
       setMessages(prev => [...prev, {
         sender: 'bot',
-        text: response.reply,
-        suggestions: response.suggestions || []
+        text: chatData.reply || "I'm sorry, I couldn't understand that.",
+        suggestions: chatData.suggestions || [],
+        data: chatData.data || null
       }]);
     } catch (e) {
       console.error('Chat error:', e);
@@ -65,6 +120,16 @@ export default function ChatWindow({ onClose }) {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSend();
+    }
+  };
+
+  const handleViewOnMap = (lot) => {
+    if (lot.location && lot.location.coordinates) {
+      const [lng, lat] = lot.location.coordinates;
+      navigate(`/explore?lat=${lat}&lng=${lng}&name=${encodeURIComponent(lot.name)}`);
+      onClose();
+    } else {
+      toast.error('Coordinates not available for this parking lot');
     }
   };
 
@@ -110,14 +175,45 @@ export default function ChatWindow({ onClose }) {
               </div>
 
               {/* Message text card */}
-              <div className="space-y-3">
-                <div className={`p-3.5 rounded-2xl text-xs font-semibold leading-relaxed shadow-sm ${
+              <div className="space-y-3 w-full">
+                <div className={`p-3.5 rounded-2xl text-xs font-semibold leading-relaxed shadow-sm whitespace-pre-line ${
                   isBot
                     ? 'bg-slate-100/60 border border-slate-200 text-slate-800 rounded-tl-none'
                     : 'bg-indigo-600 text-white rounded-tr-none'
                 }`}>
                   {msg.text}
                 </div>
+
+                {/* Displaying mockup/real parking locations returned from query */}
+                {isBot && msg.data && Array.isArray(msg.data) && (
+                  <div className="space-y-2 mt-2">
+                    {msg.data.map((lot) => (
+                      <div key={lot._id || lot.id} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-3.5 shadow-sm">
+                        <div className="flex items-start justify-between gap-1">
+                          <div>
+                            <h5 className="font-extrabold text-xs text-slate-900">{lot.name}</h5>
+                            <p className="text-[10px] text-slate-500 flex items-center gap-0.5 mt-0.5">
+                              <MapPin className="w-3 h-3 text-cyan-600" />
+                              <span>{lot.address}</span>
+                            </p>
+                          </div>
+                          <span className="text-[11px] font-black text-cyan-600 shrink-0">₹{lot.pricePerHour}/hr</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 border-t border-slate-200/60 pt-2.5">
+                          <span className="text-[10px] font-bold text-emerald-700">🅿️ {lot.availableSlots} slots free</span>
+                          <button
+                            type="button"
+                            onClick={() => handleViewOnMap(lot)}
+                            className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 text-white font-extrabold text-[9px] rounded-lg uppercase tracking-wider flex items-center gap-1 select-none shadow-sm active:scale-95 transition-all"
+                          >
+                            <Compass className="w-3 h-3" />
+                            <span>View on Map</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Inline clickable Quick Replies suggestions */}
                 {isBot && msg.suggestions && msg.suggestions.length > 0 && (
@@ -161,24 +257,39 @@ export default function ChatWindow({ onClose }) {
         <div className="relative flex items-center bg-slate-100 border border-slate-300 rounded-2xl focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/10 transition-all">
           <input
             type="text"
-            placeholder="Type a message..."
+            placeholder={isListening ? "Listening..." : "Type a message..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyPress}
-            disabled={loading}
+            disabled={loading || isListening}
             className="flex-1 bg-transparent px-4 py-3 text-xs placeholder-slate-500 focus:outline-none disabled:opacity-50 text-slate-900 font-semibold"
           />
 
           <div className="flex items-center gap-1.5 pr-2.5">
+            {/* Voice Input Button */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              disabled={loading}
+              className={`p-2 rounded-xl transition-all shadow ${
+                isListening 
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse' 
+                  : 'bg-white hover:bg-slate-200 text-slate-700'
+              }`}
+              title={isListening ? "Stop listening" : "Start voice typing"}
+            >
+              {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+            </button>
+
             {/* Enter key shortcut badge */}
-            <span className="hidden sm:inline-flex items-center gap-0.5 text-[9px] text-slate-600 font-bold bg-white border border-slate-750 px-1.5 py-0.5 rounded uppercase select-none">
+            <span className="hidden sm:inline-flex items-center gap-0.5 text-[9px] text-slate-500 font-bold bg-white border border-slate-750 px-1.5 py-0.5 rounded uppercase select-none">
               <span>Enter</span>
               <CornerDownLeft className="w-2 h-2" />
             </span>
 
             <button
               type="button"
-              disabled={loading || !input.trim()}
+              disabled={loading || !input.trim() || isListening}
               onClick={() => handleSend()}
               className="p-2 bg-primary-600 hover:bg-primary-500 disabled:bg-slate-800 text-white disabled:text-slate-600 rounded-xl transition-all shadow"
             >

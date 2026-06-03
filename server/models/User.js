@@ -43,6 +43,11 @@ const userSchema = new mongoose.Schema(
         ref: 'ParkingLot',
       },
     ],
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true, // Allow multiple users to have undefined/null googleId
+    },
     role: {
       type: String,
       enum: ['user', 'admin'],

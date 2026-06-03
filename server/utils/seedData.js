@@ -22,9 +22,19 @@ const generateSlots = (totalSlots, occupancyRate) => {
     const rowIndex = Math.floor(i / slotsPerRow);
     const slotIndex = (i % slotsPerRow) + 1;
     const letter = letters[rowIndex];
+    
+    // Distribute slot types: 20% compact (2 wheelers), 55% standard + 10% ev (4 wheelers), 10% large (heavy), 5% handicap
+    let type = 'standard';
+    const mod = i % 20;
+    if (mod < 4) type = 'compact';        // 2 Wheelers (Bikes)
+    else if (mod < 15) type = 'standard'; // 4 Wheelers (Standard)
+    else if (mod < 17) type = 'ev';       // 4 Wheelers (EV charging)
+    else if (mod < 19) type = 'large';    // Heavy Vehicles (6+ Wheelers)
+    else type = 'handicap';               // Handicap access
+
     slots.push({
       slotNumber: `${letter}${slotIndex}`,
-      type: 'standard',
+      type,
       floor: Math.floor(rowIndex / 2) + 1,
       isOccupied: i < occupiedCount, // First N slots are occupied
     });
@@ -65,10 +75,10 @@ const allAmenities = [
 ];
 
 // =========================================================================
-// 18 Realistic Parking Lots Across Indian Cities
+// 50 Realistic Parking Lots Across 5 Target Indian Cities (10 per city)
 // =========================================================================
 const parkingLotsData = [
-  // --- KOCHI (4 lots) ---
+  // --- KOCHI (10 lots) ---
   {
     name: 'Lulu Mall Parking',
     address: 'Lulu Mall, Edappally, Kochi, Kerala 682024',
@@ -105,8 +115,62 @@ const parkingLotsData = [
     pricePerHour: 25,
     operatingHours: { open: '06:00', close: '21:00' },
   },
+  {
+    name: 'Kakkanad InfoPark Zone',
+    address: 'Infopark Phase 1, Kakkanad, Kochi, Kerala 682030',
+    description: 'Dedicated tech park parking complex with smart slot sensors and EV fast charging stations.',
+    coordinates: [76.3639, 10.0104],
+    totalSlots: 70,
+    pricePerHour: 30,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Vytila Mobility Hub Parking',
+    address: 'Mobility Hub Road, Vytila, Kochi, Kerala 682019',
+    description: 'Intermodal transit hub parking. Safe overnight parking for commuters using metro, bus, or boat ferry.',
+    coordinates: [76.3218, 9.9678],
+    totalSlots: 50,
+    pricePerHour: 20,
+    operatingHours: { open: '05:00', close: '23:30' },
+  },
+  {
+    name: 'Fort Kochi Beach Parking',
+    address: 'Vasco da Gama Square, Fort Kochi, Kochi, Kerala 682001',
+    description: 'Tourist-friendly open-air parking near Chinese Fishing Nets and beach walkways.',
+    coordinates: [76.2423, 9.9679],
+    totalSlots: 40,
+    pricePerHour: 30,
+    operatingHours: { open: '06:00', close: '22:00' },
+  },
+  {
+    name: 'Tripunithura Station Parking',
+    address: 'Railway Station Road, Tripunithura, Kochi, Kerala 682301',
+    description: 'Convenient transit parking facility adjacent to Tripunithura Railway Station and metro.',
+    coordinates: [76.3495, 9.9515],
+    totalSlots: 30,
+    pricePerHour: 20,
+    operatingHours: { open: '05:00', close: '22:00' },
+  },
+  {
+    name: 'Palarivattom Metro Parking',
+    address: 'Palarivattom Metro Station, Pipeline Road, Kochi, Kerala 682025',
+    description: 'Quick-access park & ride facility under Palarivattom Metro Station corridor.',
+    coordinates: [76.3116, 10.0076],
+    totalSlots: 35,
+    pricePerHour: 25,
+    operatingHours: { open: '06:00', close: '22:35' },
+  },
+  {
+    name: 'Kalamassery Town Parking',
+    address: 'Changampuzha Nagar, Kalamassery, Kochi, Kerala 682033',
+    description: 'Safe neighborhood parking spot near Cusat University campus and local markets.',
+    coordinates: [76.3223, 10.0389],
+    totalSlots: 40,
+    pricePerHour: 20,
+    operatingHours: { open: '07:00', close: '21:00' },
+  },
 
-  // --- THIRUVANANTHAPURAM (4 lots) ---
+  // --- THIRUVANANTHAPURAM (10 lots) ---
   {
     name: 'Technopark Parking Hub',
     address: 'Technopark Campus, Kazhakkoottam, Thiruvananthapuram, Kerala 695581',
@@ -127,7 +191,7 @@ const parkingLotsData = [
   },
   {
     name: 'Kowdiar Premium Parking',
-    address: 'Kowdiar, near Kowdiar Palace, Thiruvananthapuram, Kerala 695003',
+    address: 'Kowdiar Palace Rd, Kowdiar, Thiruvananthapuram, Kerala 695003',
     description: 'Premium parking in the upscale Kowdiar locality. Valet service and car wash available.',
     coordinates: [76.9567, 8.5133],
     totalSlots: 25,
@@ -143,8 +207,62 @@ const parkingLotsData = [
     pricePerHour: 25,
     operatingHours: { open: '06:00', close: '23:00' },
   },
+  {
+    name: 'Thampanoor Central Station Parking',
+    address: 'Station Rd, Thampanoor, Thiruvananthapuram, Kerala 695001',
+    description: 'Multi-level parking plaza right next to Central Railway Station and KSRTC Terminal.',
+    coordinates: [76.9504, 8.4891],
+    totalSlots: 60,
+    pricePerHour: 30,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Palayam Connemara Market Parking',
+    address: 'Palayam Junction, MG Road, Thiruvananthapuram, Kerala 695034',
+    description: 'Bustling central city parking complex, ideal for visiting Connemara Market and public libraries.',
+    coordinates: [76.9501, 8.5008],
+    totalSlots: 45,
+    pricePerHour: 30,
+    operatingHours: { open: '07:00', close: '22:00' },
+  },
+  {
+    name: 'Lulu Mall Trivandrum Parking',
+    address: 'Lulu Mall, Kazhakkoottam-Kovalam Bypass, Thiruvananthapuram, Kerala 695021',
+    description: 'Gigantic smart parking terminal with electronic availability guides and EV chargers.',
+    coordinates: [76.8923, 8.5298],
+    totalSlots: 80,
+    pricePerHour: 40,
+    operatingHours: { open: '09:00', close: '23:00' },
+  },
+  {
+    name: 'Vizhinjam Port Transit Parking',
+    address: 'Harbour Road, Vizhinjam, Thiruvananthapuram, Kerala 695521',
+    description: 'Secure terminal parking for heavy vehicles and logistic containers near the seaport gates.',
+    coordinates: [76.9942, 8.3768],
+    totalSlots: 50,
+    pricePerHour: 50,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Medical College Parking Complex',
+    address: 'Ulloor-Kannammoola Rd, Thiruvananthapuram, Kerala 695011',
+    description: 'Spacious parking facility catering to patients and visitors of Government Medical College.',
+    coordinates: [76.9295, 8.5215],
+    totalSlots: 55,
+    pricePerHour: 20,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Vattiyoorkavu Town Lot',
+    address: 'Vattiyoorkavu Junction, Thiruvananthapuram, Kerala 695013',
+    description: 'Local shopping district parking space. Ideal for short-term stays.',
+    coordinates: [76.9806, 8.5239],
+    totalSlots: 30,
+    pricePerHour: 20,
+    operatingHours: { open: '08:00', close: '21:00' },
+  },
 
-  // --- KOZHIKODE (4 lots) ---
+  // --- KOZHIKODE / CALICUT (10 lots) ---
   {
     name: 'SM Street Parking Complex',
     address: 'Mittai Theruvu (SM Street), Kozhikode, Kerala 673001',
@@ -181,8 +299,62 @@ const parkingLotsData = [
     pricePerHour: 35,
     operatingHours: { open: '00:00', close: '23:59' },
   },
+  {
+    name: 'Mananchira Square Town Lot',
+    address: 'Mananchira Road, Kozhikode, Kerala 673001',
+    description: 'Central open parking opposite the historic Mananchira park and pond.',
+    coordinates: [75.7801, 11.2536],
+    totalSlots: 35,
+    pricePerHour: 25,
+    operatingHours: { open: '08:00', close: '21:30' },
+  },
+  {
+    name: 'Calicut Railway Station Parking',
+    address: 'Railway Station Road, Kozhikode, Kerala 673002',
+    description: 'Offsite railway commuter parking with 24-hour security guards and heavy vehicle capacity.',
+    coordinates: [75.7844, 11.2435],
+    totalSlots: 50,
+    pricePerHour: 20,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Mavoor Road Transit Plaza',
+    address: 'Mavoor Road, Tazhekkod, Kozhikode, Kerala 673004',
+    description: 'Quick-stop parking near the central bus junction, shopping centers, and medical labs.',
+    coordinates: [75.7925, 11.2592],
+    totalSlots: 30,
+    pricePerHour: 30,
+    operatingHours: { open: '07:00', close: '22:30' },
+  },
+  {
+    name: 'KSRTC Bus Stand Multi-level',
+    address: 'KSRTC Terminal, Mavoor Road, Kozhikode, Kerala 673001',
+    description: 'Modern multi-story terminal parking for easy local transit links and shopping visits.',
+    coordinates: [75.7919, 11.2576],
+    totalSlots: 45,
+    pricePerHour: 25,
+    operatingHours: { open: '06:00', close: '23:00' },
+  },
+  {
+    name: 'Focus Mall Parking Lot',
+    address: 'Focus Mall, Mavoor Road, Kozhikode, Kerala 673004',
+    description: 'Safe underground parking at Focus Mall. Covered bays and security guards.',
+    coordinates: [75.7905, 11.2588],
+    totalSlots: 35,
+    pricePerHour: 30,
+    operatingHours: { open: '09:30', close: '21:30' },
+  },
+  {
+    name: 'Elathur Beach Side Lot',
+    address: 'Elathur Harbour Road, Kozhikode, Kerala 673303',
+    description: 'Scenic marine parking spot ideal for visiting the local estuary and seafood spots.',
+    coordinates: [75.7335, 11.3320],
+    totalSlots: 40,
+    pricePerHour: 20,
+    operatingHours: { open: '06:00', close: '21:00' },
+  },
 
-  // --- BANGALORE (3 lots) ---
+  // --- BANGALORE (10 lots) ---
   {
     name: 'MG Road Metro Parking',
     address: 'MG Road, near Trinity Metro Station, Bangalore, Karnataka 560001',
@@ -210,8 +382,71 @@ const parkingLotsData = [
     pricePerHour: 40,
     operatingHours: { open: '06:00', close: '22:00' },
   },
+  {
+    name: 'Koramangala Socials Parking',
+    address: '80 Feet Road, Koramangala 3rd Block, Bangalore, Karnataka 560034',
+    description: 'Safe neighborhood parking close to Koramangala retail high-streets and eateries.',
+    coordinates: [77.6244, 12.9352],
+    totalSlots: 40,
+    pricePerHour: 50,
+    operatingHours: { open: '10:00', close: '23:30' },
+  },
+  {
+    name: 'Whitefield ITPL Parking Tower',
+    address: 'ITPL Main Road, Whitefield, Bangalore, Karnataka 560066',
+    description: 'Automated multi-level tower serving ITPL campus tech workers. Active 24/7.',
+    coordinates: [77.7340, 12.9866],
+    totalSlots: 75,
+    pricePerHour: 40,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Majestic Transit Center Lot',
+    address: 'Kempegowda Bus Station Road, Majestic, Bangalore, Karnataka 560009',
+    description: 'Large terminal parking adjacent to Majestic Railway & Central Metro Stations.',
+    coordinates: [77.5726, 12.9779],
+    totalSlots: 80,
+    pricePerHour: 30,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Jayanagar Shopping Complex Lot',
+    address: 'Jayanagar 4th Block, 10th Main Rd, Bangalore, Karnataka 560011',
+    description: 'Civic market-complex parking. Popular for visiting Jayanagar shopping street hubs.',
+    coordinates: [77.5824, 12.9298],
+    totalSlots: 50,
+    pricePerHour: 40,
+    operatingHours: { open: '08:00', close: '22:00' },
+  },
+  {
+    name: 'HSR Layout Club Parking',
+    address: '14th Main Rd, HSR Layout Sector 4, Bangalore, Karnataka 560102',
+    description: 'Safe, tree-lined residential area parking, close to HSR Layout restaurants and startups.',
+    coordinates: [77.6385, 12.9116],
+    totalSlots: 35,
+    pricePerHour: 40,
+    operatingHours: { open: '07:00', close: '22:00' },
+  },
+  {
+    name: 'Malleshwaram Mantri Square Lot',
+    address: 'Mantri Square Mall, Sampige Rd, Bangalore, Karnataka 560003',
+    description: 'Subterranean parking facility with smart payment gateways and direct metro bridge.',
+    coordinates: [77.5732, 12.9918],
+    totalSlots: 55,
+    pricePerHour: 50,
+    operatingHours: { open: '09:00', close: '22:30' },
+  },
+  {
+    name: 'Hebbal Flyover Parking Hub',
+    address: 'Hebbal Kempapura Outer Ring Rd, Bangalore, Karnataka 560024',
+    description: 'Convenient park-and-fly transit lot for airport shuttle buses and northern commuters.',
+    coordinates: [77.5912, 13.0358],
+    totalSlots: 60,
+    pricePerHour: 30,
+    operatingHours: { open: '05:00', close: '23:00' },
+  },
 
-  // --- CHENNAI (3 lots) ---
+  // --- CHENNAI (10 lots) ---
   {
     name: 'T Nagar Parking Complex',
     address: 'Usman Road, T Nagar, Chennai, Tamil Nadu 600017',
@@ -238,6 +473,69 @@ const parkingLotsData = [
     totalSlots: 60,
     pricePerHour: 45,
     operatingHours: { open: '06:00', close: '23:00' },
+  },
+  {
+    name: 'Phoenix Marketcity Parking',
+    address: 'Phoenix Marketcity, Velachery Rd, Chennai, Tamil Nadu 600042',
+    description: 'Extensive multi-level mall parking with smart vehicle indicators and valet slots.',
+    coordinates: [80.2166, 12.9918],
+    totalSlots: 75,
+    pricePerHour: 50,
+    operatingHours: { open: '09:30', close: '22:30' },
+  },
+  {
+    name: 'Chennai Central Premium Parking',
+    address: 'Kannappar Thidal, Central Station, Chennai, Tamil Nadu 600003',
+    description: 'Premium short-term and long-term rail commuter parking located opposite Central Station gates.',
+    coordinates: [80.2727, 13.0822],
+    totalSlots: 60,
+    pricePerHour: 40,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Marina Beach Public Lot',
+    address: 'Marina Beach Road, Triplicane, Chennai, Tamil Nadu 600005',
+    description: 'Open-air beachfront parking. Direct access to the beach stalls and light house.',
+    coordinates: [80.2825, 13.0502],
+    totalSlots: 80,
+    pricePerHour: 20,
+    operatingHours: { open: '05:00', close: '23:00' },
+  },
+  {
+    name: 'Nungambakkam High Road Lot',
+    address: 'Nungambakkam High Road, Chennai, Tamil Nadu 600034',
+    description: 'Central commercial district parking, close to embassies, hotels, and luxury boutiques.',
+    coordinates: [80.2452, 13.0605],
+    totalSlots: 40,
+    pricePerHour: 50,
+    operatingHours: { open: '07:30', close: '22:00' },
+  },
+  {
+    name: 'Adyar Depot Multi-level',
+    address: 'Lattice Bridge Road, Adyar, Chennai, Tamil Nadu 600020',
+    description: 'Multi-level smart parking facility serving the southern residential hub of Adyar.',
+    coordinates: [80.2526, 13.0064],
+    totalSlots: 45,
+    pricePerHour: 30,
+    operatingHours: { open: '06:00', close: '22:00' },
+  },
+  {
+    name: 'Koyambedu Bus Terminus Lot',
+    address: 'CMBT Complex, Koyambedu, Chennai, Tamil Nadu 600107',
+    description: 'High-volume transit park & ride lot for express bus commuters. Heavily guarded.',
+    coordinates: [80.1914, 13.0688],
+    totalSlots: 70,
+    pricePerHour: 20,
+    operatingHours: { open: '00:00', close: '23:59' },
+  },
+  {
+    name: 'Besant Nagar Beach Parking',
+    address: 'Edward Elliot\'s Beach, Besant Nagar, Chennai, Tamil Nadu 600090',
+    description: 'Popular beach side parking. Well suited for weekend visitors and diners.',
+    coordinates: [80.2692, 12.9998],
+    totalSlots: 50,
+    pricePerHour: 30,
+    operatingHours: { open: '05:00', close: '23:00' },
   },
 ];
 
