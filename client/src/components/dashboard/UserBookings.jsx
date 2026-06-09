@@ -244,12 +244,12 @@ export default function UserBookings() {
         </div>
       )}
 
-      {/* Razorpay Simulation Modal */}
-      <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Checkout Sandbox" size="md">
+      {/* Payment Checkout Modal */}
+      <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Secure Checkout Gateway" size="md">
         {selectedBooking && (
           <div className="flex items-center justify-center p-2">
             <PaymentSimulator
-              amount={selectedBooking.totalAmount}
+              booking={selectedBooking}
               onPaymentComplete={handlePaymentComplete}
               onCancel={() => setShowPaymentModal(false)}
             />

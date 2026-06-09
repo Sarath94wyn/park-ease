@@ -8,7 +8,7 @@ const slotSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['compact', 'standard', 'large', 'handicap', 'ev'],
+      enum: ['compact', 'standard', 'large', 'handicap', 'ev', 'vip', 'reserved'],
       default: 'standard',
     },
     floor: {
@@ -18,6 +18,16 @@ const slotSchema = new mongoose.Schema(
     isOccupied: {
       type: Boolean,
       default: false,
+    },
+    maintenanceStatus: {
+      type: String,
+      enum: ['operational', 'maintenance'],
+      default: 'operational',
+    },
+    sensorStatus: {
+      type: String,
+      enum: ['online', 'offline'],
+      default: 'online',
     },
   },
   { _id: true }
@@ -92,6 +102,19 @@ const parkingLotSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'maintenance', 'closed'],
+      default: 'active',
+    },
+    disabledSlotsCount: {
+      type: Number,
+      default: 0,
+    },
+    evChargingCount: {
+      type: Number,
+      default: 0,
     },
   },
   {

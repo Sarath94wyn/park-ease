@@ -53,6 +53,27 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
+    status: {
+      type: String,
+      enum: ['active', 'blocked'],
+      default: 'active',
+    },
+    vehicles: [
+      {
+        vehicleNumber: { type: String, uppercase: true, trim: true },
+        vehicleType: { type: String, enum: ['car', 'bike', 'suv'], default: 'car' },
+      }
+    ],
+    staffRole: {
+      type: String,
+      enum: ['none', 'super_admin', 'parking_manager', 'operations_staff', 'security_personnel'],
+      default: 'none',
+    },
+    permissions: [
+      {
+        type: String,
+      }
+    ],
   },
   {
     timestamps: true,

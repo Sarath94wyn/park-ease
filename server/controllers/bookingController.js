@@ -304,6 +304,103 @@ const getAllBookings = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Create Razorpay Order
+ * @route   POST /api/bookings/:id/razorpay-order
+ * @access  Private
+ */
+const createRazorpayOrder = async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
+      return res.status(400).json({
+        success: false,
+        message: 'Razorpay credentials are not configured on the server. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your server .env file.'
+      });
+    }
+
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret
+    });
+
+    const options = {
+      amount: Math.round(booking.totalAmount * 100), // amount in paisa
+      currency: 'INR',
+      receipt: booking._id.toString(),
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.status(200).json({
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify Razorpay Payment Signature
+ * @route   POST /api/bookings/:id/razorpay-verify
+ * @access  Private
+ */
+const verifyRazorpayPayment = async (req, res, next) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return res.status(400).json({
+        success: false,
+        message: 'Razorpay key secret is missing. Cannot verify signature.'
+      });
+    }
+
+    const hmac = crypto.createHmac('sha256', keySecret);
+    hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+    const generatedSignature = hmac.digest('hex');
+
+    if (generatedSignature === razorpay_signature) {
+      booking.paymentStatus = 'paid';
+      booking.paymentId = razorpay_payment_id;
+      await booking.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Payment verified and captured successfully',
+        data: {
+          paymentId: booking.paymentId,
+          status: booking.paymentStatus
+        }
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Payment verification failed: Invalid signature'
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -311,4 +408,6 @@ module.exports = {
   cancelBooking,
   simulatePayment,
   getAllBookings,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 };

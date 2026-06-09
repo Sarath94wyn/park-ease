@@ -2,17 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import ParkingLotForm from '../components/admin/ParkingLotForm';
+
+// Import new modular subcomponents
+import ParkingSpacesManager from '../components/admin/ParkingSpacesManager';
+import BookingManager from '../components/admin/BookingManager';
+import UserManager from '../components/admin/UserManager';
+import RevenuePaymentsManager from '../components/admin/RevenuePaymentsManager';
+import LiveMonitoring from '../components/admin/LiveMonitoring';
+import AnalyticsReports from '../components/admin/AnalyticsReports';
+import AlertsFeed from '../components/admin/AlertsFeed';
+import StaffRolesManager from '../components/admin/StaffRolesManager';
+import CustomerSupportManager from '../components/admin/CustomerSupportManager';
+
 import { getAllParkingLots, createParkingLot, updateParkingLot, deleteParkingLot } from '../services/parkingService';
-import { getAllBookings } from '../services/bookingService';
-import { getAllUsers, updateUserRole, updateUserPoints, getAllQueries, resolveQuery } from '../services/adminService';
 import Modal from '../components/common/Modal';
-import { Shield, Sparkles, MapPin, Ticket, Users, Edit3, Trash2, ShieldAlert, Plus, Award, User, RefreshCw, MessageSquare } from 'lucide-react';
-import { formatCurrency, formatDate } from '../utils/helpers';
+import { getDashboardStats } from '../services/adminService';
+import { 
+  Shield, MapPin, Ticket, Users, Edit3, Trash2, Plus, LogOut,
+  LayoutDashboard, Cpu, DollarSign, Activity, BarChart3, Bell, ShieldCheck, MessageSquare 
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminPage() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview'); // overview | lots | bookings | users | queries
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Parking lots admin state
   const [lots, setLots] = useState([]);
@@ -20,23 +33,30 @@ export default function AdminPage() {
   const [showLotModal, setShowLotModal] = useState(false);
   const [selectedLotForEdit, setSelectedLotForEdit] = useState(null);
 
-  // Bookings list state
-  const [bookings, setBookings] = useState([]);
-  const [bookingsLoading, setBookingsLoading] = useState(false);
+  // Sidebar live indicators state
+  const [sidebarStats, setSidebarStats] = useState(null);
 
-  // Users listing state
-  const [users, setUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
+  const fetchSidebarStats = async () => {
+    try {
+      const res = await getDashboardStats();
+      const statsObj = res.data?.stats || res.stats || res;
+      setSidebarStats(statsObj);
+    } catch (e) {
+      console.error('Sidebar stats fetch failed:', e);
+    }
+  };
 
-  // Support queries listing state
-  const [queries, setQueries] = useState([]);
-  const [queriesLoading, setQueriesLoading] = useState(false);
+  useEffect(() => {
+    fetchSidebarStats();
+    const timer = setInterval(fetchSidebarStats, 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchLots = async () => {
     try {
       setLotsLoading(true);
       const data = await getAllParkingLots();
-      setLots(data.parkingLots || data);
+      setLots(data.parkingLots || data.data || data);
     } catch (e) {
       console.error(e);
       toast.error('Failed to load parking lots');
@@ -45,72 +65,10 @@ export default function AdminPage() {
     }
   };
 
-  const fetchBookings = async () => {
-    try {
-      setBookingsLoading(true);
-      const data = await getAllBookings();
-      setBookings(data.bookings || data);
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to load bookings');
-    } finally {
-      setBookingsLoading(false);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      setUsersLoading(true);
-      const data = await getAllUsers();
-      setUsers(data.users || data);
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to load users list');
-    } finally {
-      setUsersLoading(false);
-    }
-  };
-
-  const fetchQueries = async () => {
-    try {
-      setQueriesLoading(true);
-      const data = await getAllQueries();
-      setQueries(data.queries || data.data || data);
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to load queries');
-    } finally {
-      setQueriesLoading(false);
-    }
-  };
-
-  const handleResolveQuery = async (id) => {
-    try {
-      await resolveQuery(id);
-      toast.success('Query marked as resolved');
-      fetchQueries();
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to resolve query');
-    }
-  };
-
-  const handleUpdatePoints = async (id, points) => {
-    try {
-      await updateUserPoints(id, points);
-      toast.success(`User loyalty points updated to ${points}`);
-      fetchUsers();
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to update user points');
-    }
-  };
-
   useEffect(() => {
-    if (activeTab === 'lots') fetchLots();
-    if (activeTab === 'bookings') fetchBookings();
-    if (activeTab === 'users') fetchUsers();
-    if (activeTab === 'queries') fetchQueries();
+    if (activeTab === 'lots') {
+      fetchLots();
+    }
   }, [activeTab]);
 
   const handleCreateLot = async (formData) => {
@@ -139,7 +97,7 @@ export default function AdminPage() {
   };
 
   const handleDeleteLot = async (id) => {
-    if (!window.confirm('Are you sure you want to deactivate this parking lot? It will no longer show in search.')) return;
+    if (!window.confirm('Are you sure you want to deactivate this parking lot? It will no longer show in client searches.')) return;
     try {
       await deleteParkingLot(id);
       toast.success('Parking lot deactivated');
@@ -150,475 +108,247 @@ export default function AdminPage() {
     }
   };
 
-  const handleRoleToggle = async (targetUser) => {
-    const nextRole = targetUser.role === 'admin' ? 'user' : 'admin';
-    if (!window.confirm(`Are you sure you want to change role of ${targetUser.name} to ${nextRole}?`)) return;
-    
-    try {
-      await updateUserRole(targetUser._id, nextRole);
-      toast.success(`Role changed to ${nextRole}`);
-      fetchUsers();
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to update role');
-    }
-  };
-
   if (!user || user.role !== 'admin') return null;
 
+  // Sidebar Menu Items Config
+  const MENU_ITEMS = [
+    { key: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { key: 'lots', label: 'Facilities CRUD', icon: <MapPin className="w-4 h-4" /> },
+    { key: 'spaces', label: 'Slots Config', icon: <Cpu className="w-4 h-4" /> },
+    { key: 'bookings', label: 'Reservations Log', icon: <Ticket className="w-4 h-4" /> },
+    { key: 'users', label: 'Userbase Registry', icon: <Users className="w-4 h-4" /> },
+    { key: 'revenue', label: 'Revenue & Payments', icon: <DollarSign className="w-4 h-4" /> },
+    { key: 'live', label: 'Live Monitoring', icon: <Activity className="w-4 h-4" /> },
+    { key: 'analytics', label: 'Analytics & Trends', icon: <BarChart3 className="w-4 h-4" /> },
+    { key: 'alerts', label: 'Incident Feed', icon: <Bell className="w-4 h-4" /> },
+    { key: 'staff', label: 'Staff Roles', icon: <ShieldCheck className="w-4 h-4" /> },
+    { key: 'support', label: 'Support Inquiries', icon: <MessageSquare className="w-4 h-4" /> },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 py-12 px-4 sm:px-6 relative select-none">
-      {/* Background decoration radial blurs */}
-      <div className="absolute top-[-10%] right-[-10%] w-72 h-72 bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none"></div>
-
-      <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-        {/* Visual Greetings Admin Banner */}
-        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 p-6 rounded-3xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center sm:text-left">
-            <span className="text-[9px] uppercase font-black bg-indigo-500/20 border border-indigo-500/35 text-indigo-300 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit mx-auto sm:mx-0">
-              <Shield className="w-2.5 h-2.5" />
-              <span>Administrative System Panel</span>
-            </span>
-            <h2 className="text-2xl font-black tracking-tight mt-2">Console Dashboard</h2>
-            <p className="text-xs text-slate-600 font-semibold">Logged in as {user.name} ({user.email})</p>
+    <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col md:flex-row relative">
+      {/* Sidebar navigation */}
+      <aside className="w-full md:w-64 bg-neutral-950 text-neutral-300 flex flex-col justify-between border-r border-neutral-800 shrink-0 z-20">
+        <div className="p-5 space-y-6">
+          <div className="flex items-center gap-2.5 border-b border-neutral-800 pb-5">
+            <Shield className="w-5 h-5 text-white" />
+            <div className="flex flex-col">
+              <span className="font-extrabold text-xs tracking-wider text-white uppercase">PARKEASE SYSTEM</span>
+              <span className="text-[9px] uppercase font-bold tracking-widest text-neutral-500">ADMINISTRATIVE PORTAL</span>
+            </div>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => (window.location.href = '/dashboard')}
-              className="btn-outline text-xs px-5 py-2.5 rounded-xl border-slate-300 text-slate-700 hover:text-white"
-            >
-              User Dashboard
-            </button>
+          <nav className="space-y-1 text-left">
+            {MENU_ITEMS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setActiveTab(item.key)}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all rounded-md ${
+                  activeTab === item.key
+                    ? 'bg-neutral-800 text-white font-extrabold border-l-2 border-white pl-3.5 shadow-sm'
+                    : 'text-neutral-500 hover:text-white hover:bg-neutral-900'
+                }`}
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <div className="shrink-0">{item.icon}</div>
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {item.key === 'alerts' && sidebarStats?.activeAlertsCount > 0 && (
+                  <span className="bg-rose-600 border border-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black animate-pulse">
+                    {sidebarStats.activeAlertsCount}
+                  </span>
+                )}
+                {item.key === 'live' && sidebarStats?.activeBookings > 0 && (
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="p-4 border-t border-neutral-900 bg-neutral-950 text-neutral-400 text-[10px] space-y-3 font-sans">
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <img
+                src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=333333&color=ffffff`}
+                alt={user.name}
+                className="w-8 h-8 rounded-full border border-neutral-800 shadow-sm"
+                referrerPolicy="no-referrer"
+              />
+              <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-neutral-950" title="System Operator Online"></span>
+            </div>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="font-extrabold text-neutral-100 truncate leading-tight">{user.name}</span>
+              <span className="text-[9px] text-neutral-400 truncate font-semibold mb-0.5">{user.email}</span>
+              <span className="text-[8px] uppercase tracking-wider font-black text-neutral-500 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+                <span>{user.staffRole ? user.staffRole.replace('_', ' ') : (user.role || 'Admin')}</span>
+              </span>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              window.location.href = '/';
+            }}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-white rounded text-[9px] font-bold uppercase tracking-wider transition-all"
+          >
+            <LogOut className="w-3 h-3" />
+            <span>Logout Session</span>
+          </button>
         </div>
+      </aside>
 
-        {/* Dynamic tabs switcher bar */}
-        <div className="flex gap-4 border-b border-slate-200 pb-1 overflow-x-auto scrollbar-none select-none">
-          {[
-            { key: 'overview', label: 'Overview', icon: <Shield className="w-4 h-4" /> },
-            { key: 'lots', label: 'Facilities', icon: <MapPin className="w-4 h-4" /> },
-            { key: 'bookings', label: 'Reservations', icon: <Ticket className="w-4 h-4" /> },
-            { key: 'users', label: 'Userbase', icon: <Users className="w-4 h-4" /> },
-            { key: 'queries', label: 'Support Queries', icon: <MessageSquare className="w-4 h-4" /> },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-wider border-b-2 whitespace-nowrap transition-all ${
-                activeTab === tab.key
-                  ? 'border-primary-500 text-primary-700 font-black'
-                  : 'border-transparent text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
+      {/* Main panel content space */}
+      <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-full z-10 relative">
+        <div className="max-w-6xl mx-auto">
+          {/* Active Tab Panel Controller */}
+          <div className="animate-fade-in bg-white border border-neutral-200 p-6 rounded-lg shadow-sm">
+            
+            {activeTab === 'overview' && <AdminDashboard />}
+            
+            {activeTab === 'spaces' && <ParkingSpacesManager />}
+            
+            {activeTab === 'bookings' && <BookingManager />}
+            
+            {activeTab === 'users' && <UserManager />}
+            
+            {activeTab === 'revenue' && <RevenuePaymentsManager />}
+            
+            {activeTab === 'live' && <LiveMonitoring />}
+            
+            {activeTab === 'analytics' && <AnalyticsReports />}
+            
+            {activeTab === 'alerts' && <AlertsFeed />}
+            
+            {activeTab === 'staff' && <StaffRolesManager />}
+            
+            {activeTab === 'support' && <CustomerSupportManager />}
 
-        {/* Dynamic panels controller */}
-        <div className="animate-fade-in pt-2">
-          
-          {/* Panel 1: Overview */}
-          {activeTab === 'overview' && <AdminDashboard />}
+            {/* Parking Lot Management Tab CRUD panel */}
+            {activeTab === 'lots' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
+                  <div className="space-y-0.5">
+                    <h3 className="font-extrabold text-base text-neutral-900">
+                      Parking Lot Facilities CRUD
+                    </h3>
+                    <p className="text-xs text-neutral-500">Configure geo positions, pricing, capacity, and active status.</p>
+                  </div>
 
-          {/* Panel 2: Facilities lots */}
-          {activeTab === 'lots' && (
-            <div className="space-y-6">
-              {/* Header actions */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <h3 className="font-extrabold text-lg flex items-center gap-1.5">
-                    <MapPin className="w-5 h-5 text-indigo-400" />
-                    <span>Manage Parking Lots</span>
-                  </h3>
-                  <p className="text-xs text-slate-600">Configure geo positions, pricing, capacity and slot vacancies.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLotForEdit(null);
+                      setShowLotModal(true);
+                    }}
+                    className="bg-neutral-900 hover:bg-neutral-800 text-white text-xs py-2.5 px-4 rounded-md font-bold transition-all shadow active:scale-95 flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add New Lot</span>
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedLotForEdit(null);
-                    setShowLotModal(true);
-                  }}
-                  className="btn-primary text-xs py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add New Lot</span>
-                </button>
-              </div>
-
-              {lotsLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-3">
-                  <div className="w-10 h-10 border-4 border-slate-300 border-t-indigo-500 rounded-full animate-spin"></div>
-                  <span className="text-xs text-slate-600 font-semibold tracking-wide">Syncing parking lots...</span>
-                </div>
-              ) : lots.length === 0 ? (
-                <div className="glass-card-dark p-12 text-center border border-slate-200">
-                  <span className="text-4xl">🗺️</span>
-                  <h3 className="text-base font-extrabold mt-3 text-slate-700 font-bold">No parking lots configured</h3>
-                  <p className="text-xs text-slate-600 mt-1">Configure slot assets to populate client search map screens.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/20 max-w-full">
-                  <table className="min-w-full divide-y divide-slate-800 text-left text-xs font-semibold">
-                    <thead className="bg-slate-100/60 text-slate-600 font-bold uppercase tracking-wider select-none text-[10px]">
-                      <tr>
-                        <th className="px-6 py-4">Facility Name</th>
-                        <th className="px-6 py-4">City Location</th>
-                        <th className="px-6 py-4 text-center">Hourly Pricing</th>
-                        <th className="px-6 py-4 text-center">Capacity spots</th>
-                        <th className="px-6 py-4 text-center">Status</th>
-                        <th className="px-6 py-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/80 text-slate-800">
-                      {lots.map((lot) => (
-                        <tr key={lot._id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="px-6 py-4 font-extrabold">{lot.name}</td>
-                          <td className="px-6 py-4 text-slate-600">{lot.address}</td>
-                          <td className="px-6 py-4 text-center font-bold text-cyan-600">₹{lot.pricePerHour}</td>
-                          <td className="px-6 py-4 text-center">{lot.availableSlots} / {lot.totalSlots} Slots Free</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                              lot.isActive
-                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-700'
-                                : 'bg-slate-100 text-slate-600 border border-slate-800/40'
-                            }`}>
-                              {lot.isActive ? 'ACTIVE' : 'INACTIVE'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedLotForEdit(lot);
-                                setShowLotModal(true);
-                              }}
-                              className="p-2 border border-slate-300 bg-slate-100/30 hover:bg-slate-800 text-primary-700 hover:text-primary-300 rounded-xl"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            
-                            {lot.isActive && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteLot(lot._id)}
-                                className="p-2 border border-slate-300 bg-slate-100/30 hover:bg-rose-950/20 hover:border-rose-900/50 text-slate-600 hover:text-rose-400 rounded-xl transition-all"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </td>
+                {lotsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                    <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin"></div>
+                    <span className="text-xs text-neutral-550 font-semibold">Syncing lots...</span>
+                  </div>
+                ) : lots.length === 0 ? (
+                  <div className="text-center py-12 text-neutral-500 font-semibold text-xs border border-dashed border-neutral-300 rounded-md">
+                    No parking lots found in database.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-md border border-neutral-200 max-w-full font-semibold">
+                    <table className="min-w-full divide-y divide-neutral-200 text-left text-xs text-neutral-800">
+                      <thead className="bg-neutral-50 text-neutral-500 uppercase tracking-wider text-[9px] select-none font-bold">
+                        <tr>
+                          <th className="px-6 py-3.5">Facility Name</th>
+                          <th className="px-6 py-3.5">Address</th>
+                          <th className="px-6 py-3.5 text-center">Hourly Rate</th>
+                          <th className="px-6 py-3.5 text-center">Available Capacity</th>
+                          <th className="px-6 py-3.5 text-center">Status</th>
+                          <th className="px-6 py-3.5 text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Panel 3: Booking reservations */}
-          {activeTab === 'bookings' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <div className="space-y-0.5">
-                  <h3 className="font-extrabold text-lg flex items-center gap-1.5">
-                    <Ticket className="w-5 h-5 text-indigo-400" />
-                    <span>Client Reservations Log</span>
-                  </h3>
-                  <p className="text-xs text-slate-600">Monitor vehicle entries and transactions logs.</p>
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={fetchBookings}
-                  className="p-2 border border-slate-300 bg-slate-100/30 hover:bg-slate-800 text-slate-600 hover:text-white rounded-xl transition-all"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              </div>
-
-              {bookingsLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-3">
-                  <div className="w-10 h-10 border-4 border-slate-300 border-t-indigo-500 rounded-full animate-spin"></div>
-                  <span className="text-xs text-slate-600 font-semibold tracking-wide">Syncing transaction receipts...</span>
-                </div>
-              ) : bookings.length === 0 ? (
-                <div className="glass-card-dark p-12 text-center border border-slate-200">
-                  <span className="text-4xl">🎟️</span>
-                  <h3 className="text-base font-extrabold mt-3 text-slate-700 font-bold">No reservations logged yet</h3>
-                  <p className="text-xs text-slate-600 mt-1">Bookings submitted by users populate here.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/20 max-w-full">
-                  <table className="min-w-full divide-y divide-slate-800 text-left text-xs font-semibold">
-                    <thead className="bg-slate-100/60 text-slate-600 font-bold uppercase tracking-wider select-none text-[10px]">
-                      <tr>
-                        <th className="px-6 py-4">Client User</th>
-                        <th className="px-6 py-4">Lot & Slot</th>
-                        <th className="px-6 py-4">Vehicle Info</th>
-                        <th className="px-6 py-4">Timings Check In/Out</th>
-                        <th className="px-6 py-4 text-center">Amount Bill</th>
-                        <th className="px-6 py-4 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/80 text-slate-800">
-                      {bookings.map((booking) => (
-                        <tr key={booking._id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col font-extrabold">
-                              <span>{booking.user?.name || 'Client User'}</span>
-                              <span className="text-[10px] text-slate-600 font-semibold">{booking.user?.email}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="font-extrabold">{booking.parkingLot?.name || 'Lot Plaza'}</span>
-                              <span className="text-[10px] font-bold text-cyan-600 tracking-wider">SLOT {booking.slotNumber}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="font-mono tracking-widest font-bold uppercase bg-slate-100/40 border border-slate-200/80 px-2 py-1 rounded">
-                              {booking.vehicleNumber}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-700 font-medium">
-                            <div className="flex flex-col">
-                              <span>In: {formatDate(booking.startTime)}</span>
-                              <span>Out: {formatDate(booking.endTime)}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-center font-bold text-cyan-600">{formatCurrency(booking.totalAmount)}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                              booking.status === 'active'
-                                ? booking.paymentStatus === 'paid' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-700' : 'bg-amber-500/10 border border-amber-500/20 text-amber-700'
-                                : booking.status === 'completed' ? 'bg-slate-700/30 text-slate-600' : 'bg-rose-500/10 border border-rose-500/20 text-rose-700'
-                            }`}>
-                              {booking.status === 'active' ? (booking.paymentStatus === 'paid' ? 'Paid' : 'Unpaid') : booking.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Panel 4: Users listing */}
-          {activeTab === 'users' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <div className="space-y-0.5">
-                  <h3 className="font-extrabold text-lg flex items-center gap-1.5">
-                    <Users className="w-5 h-5 text-indigo-400" />
-                    <span>Userbase Directory</span>
-                  </h3>
-                  <p className="text-xs text-slate-600">Configure administrative roles and credentials.</p>
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={fetchUsers}
-                  className="p-2 border border-slate-300 bg-slate-100/30 hover:bg-slate-800 text-slate-600 hover:text-white rounded-xl transition-all"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              </div>
-
-              {usersLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-3">
-                  <div className="w-10 h-10 border-4 border-slate-300 border-t-indigo-500 rounded-full animate-spin"></div>
-                  <span className="text-xs text-slate-600 font-semibold tracking-wide">Syncing user directory...</span>
-                </div>
-              ) : users.length === 0 ? (
-                <div className="glass-card-dark p-12 text-center border border-slate-200">
-                  <span className="text-4xl">👥</span>
-                  <h3 className="text-base font-extrabold mt-3 text-slate-700">No users found</h3>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/20 max-w-full">
-                  <table className="min-w-full divide-y divide-slate-800 text-left text-xs font-semibold">
-                    <thead className="bg-slate-100/60 text-slate-600 font-bold uppercase tracking-wider select-none text-[10px]">
-                      <tr>
-                        <th className="px-6 py-4">Profile Avatar</th>
-                        <th className="px-6 py-4">User Name</th>
-                        <th className="px-6 py-4">Email Address</th>
-                        <th className="px-6 py-4 text-center">Loyalty Points</th>
-                        <th className="px-6 py-4 text-center">System Role</th>
-                        <th className="px-6 py-4 text-right">Configure Role</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/80 text-slate-800">
-                      {users.map((targetUser) => (
-                        <tr key={targetUser._id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="px-6 py-4">
-                            {targetUser.avatar ? (
-                              <img
-                                src={targetUser.avatar}
-                                alt={targetUser.name}
-                                className="w-8 h-8 rounded-full border border-slate-750"
-                                referrerPolicy="no-referrer"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-750">
-                                <User className="w-4 h-4 text-slate-600" />
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 font-extrabold">{targetUser.name}</td>
-                          <td className="px-6 py-4 text-slate-600 font-medium">{targetUser.email}</td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <span className="font-extrabold text-amber-700 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                                {targetUser.points !== undefined ? targetUser.points : 0} PTS
+                      </thead>
+                      <tbody className="divide-y divide-neutral-200 bg-white">
+                        {lots.map((lot) => (
+                          <tr key={lot._id} className="hover:bg-neutral-50 transition-colors">
+                            <td className="px-6 py-4 font-bold text-neutral-900">{lot.name}</td>
+                            <td className="px-6 py-4 text-neutral-500 font-medium max-w-xs truncate">{lot.address}</td>
+                            <td className="px-6 py-4 text-center font-bold">
+                              <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-mono text-xs font-bold inline-block">
+                                ₹{lot.pricePerHour} /hr
                               </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const promptVal = window.prompt(`Update loyalty points balance for ${targetUser.name}:`, targetUser.points !== undefined ? targetUser.points : 0);
-                                  if (promptVal !== null) {
-                                    const pts = parseInt(promptVal, 10);
-                                    if (!isNaN(pts) && pts >= 0) {
-                                      handleUpdatePoints(targetUser._id, pts);
-                                    } else {
-                                      toast.error('Please enter a valid non-negative number');
-                                    }
-                                  }
-                                }}
-                                className="px-2 py-1 text-[10px] text-cyan-600 hover:text-cyan-700 font-black border border-slate-350 rounded-lg hover:bg-slate-50 bg-white shadow-sm"
-                                title="Adjust Points"
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`text-[9px] uppercase font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 w-fit mx-auto ${
-                                targetUser.role === 'admin'
-                                  ? 'bg-indigo-500/20 border border-indigo-500/35 text-indigo-300'
-                                  : 'bg-slate-100 text-slate-600 border border-slate-800/30'
+                            </td>
+                            <td className="px-6 py-4 text-center text-neutral-600 font-bold">
+                              {lot.availableSlots} / {lot.totalSlots} Slots Free
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded border ${
+                                lot.isActive
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-extrabold'
+                                  : 'bg-rose-50 border-rose-200 text-rose-700 font-extrabold'
                               }`}>
-                              {targetUser.role === 'admin' ? <Award className="w-2.5 h-2.5" /> : <User className="w-2.5 h-2.5 text-slate-600" />}
-                              <span>{targetUser.role}</span>
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleRoleToggle(targetUser)}
-                              className="px-3.5 py-1.5 border border-slate-300 bg-slate-100/30 hover:bg-slate-800 text-[10px] font-bold rounded-xl flex items-center gap-1 shadow active:scale-[0.98] w-fit ml-auto"
-                            >
-                              <ShieldAlert className="w-3.5 h-3.5 text-cyan-600" />
-                              <span>Toggle Admin</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Panel 5: Support queries */}
-          {activeTab === 'queries' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <div className="space-y-0.5">
-                  <h3 className="font-extrabold text-lg flex items-center gap-1.5">
-                    <MessageSquare className="w-5 h-5 text-indigo-400" />
-                    <span>Customer Support Queries</span>
-                  </h3>
-                  <p className="text-xs text-slate-600">Review and resolve customer inquiries logged via the chatbot.</p>
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={fetchQueries}
-                  className="p-2 border border-slate-300 bg-slate-100/30 hover:bg-slate-800 text-slate-600 hover:text-white rounded-xl transition-all"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
+                                {lot.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedLotForEdit(lot);
+                                    setShowLotModal(true);
+                                  }}
+                                  className="p-1.5 border border-emerald-200 hover:bg-emerald-50 text-emerald-700 rounded-md transition-all bg-white"
+                                  title="Edit Parameters"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                
+                                {lot.isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteLot(lot._id)}
+                                    className="p-1.5 border border-rose-200 hover:bg-rose-50 text-rose-700 rounded-md transition-all bg-white"
+                                    title="Deactivate Lot"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
+            )}
 
-              {queriesLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 space-y-3">
-                  <div className="w-10 h-10 border-4 border-slate-300 border-t-indigo-500 rounded-full animate-spin"></div>
-                  <span className="text-xs text-slate-600 font-semibold tracking-wide">Syncing support tickets...</span>
-                </div>
-              ) : queries.length === 0 ? (
-                <div className="glass-card-dark p-12 text-center border border-slate-200">
-                  <span className="text-4xl">💬</span>
-                  <h3 className="text-base font-extrabold mt-3 text-slate-700 font-bold">No queries logged yet</h3>
-                  <p className="text-xs text-slate-600 mt-1">Inquiries submitted via AI Assistant will appear here.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/20 max-w-full">
-                  <table className="min-w-full divide-y divide-slate-800 text-left text-xs font-semibold">
-                    <thead className="bg-slate-100/60 text-slate-600 font-bold uppercase tracking-wider select-none text-[10px]">
-                      <tr>
-                        <th className="px-6 py-4">Client User</th>
-                        <th className="px-6 py-4">Message</th>
-                        <th className="px-6 py-4">Submitted At</th>
-                        <th className="px-6 py-4 text-center">Status</th>
-                        <th className="px-6 py-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/80 text-slate-800">
-                      {queries.map((q) => (
-                        <tr key={q._id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col font-extrabold">
-                              <span>{q.user?.name || q.name || 'Anonymous User'}</span>
-                              <span className="text-[10px] text-slate-600 font-semibold">{q.user?.email || q.email || 'N/A'}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-slate-750 max-w-xs sm:max-w-md whitespace-pre-wrap leading-relaxed">
-                            {q.message}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600">
-                            {formatDate(q.createdAt)}
-                          </td>
-                          <td className="px-6 py-4 text-center font-bold">
-                            <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                              q.status === 'resolved'
-                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-700'
-                                : 'bg-amber-500/10 border border-amber-500/20 text-amber-700 animate-pulse-slow'
-                            }`}>
-                              {q.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {q.status !== 'resolved' && (
-                              <button
-                                type="button"
-                                onClick={() => handleResolveQuery(q._id)}
-                                className="px-3.5 py-1.5 border border-emerald-300 bg-emerald-50/30 hover:bg-emerald-600 hover:text-white text-[10px] font-bold rounded-xl shadow active:scale-[0.98] w-fit ml-auto transition-all"
-                              >
-                                Resolve
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
+          </div>
+          {/* Dashboard footer */}
+          <footer className="mt-8 pt-6 border-t border-neutral-200 text-neutral-400 text-[9px] font-bold uppercase tracking-wider flex justify-between items-center font-sans">
+            <span className="flex items-center gap-1.5">
+              <span>ParkEase Administrative System</span>
+              <span className="h-1 w-1 rounded-full bg-neutral-300"></span>
+              <span className="text-neutral-500 font-semibold lowercase">v1.4.0</span>
+            </span>
+            <span className="flex items-center gap-2 text-neutral-500">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>All Systems Operational</span>
+              <span>&copy; {new Date().getFullYear()}</span>
+            </span>
+          </footer>
         </div>
-      </div>
+      </main>
 
       {/* Add / Edit ParkingLot Modal */}
       <Modal isOpen={showLotModal} onClose={() => setShowLotModal(false)} title={selectedLotForEdit ? 'Update Facility Parameters' : 'Add Parking Facility'} size="lg">

@@ -21,15 +21,17 @@ const generateSlots = (totalSlots, occupancyRate) => {
   for (let i = 0; i < totalSlots; i++) {
     const rowIndex = Math.floor(i / slotsPerRow);
     const slotIndex = (i % slotsPerRow) + 1;
-    const letter = letters[rowIndex];
+    const letter = letters[rowIndex] || 'Z';
     
-    // Distribute slot types: 20% compact (2 wheelers), 55% standard + 10% ev (4 wheelers), 10% large (heavy), 5% handicap
+    // Distribute slot types: compact, standard, ev, large, vip, reserved, handicap
     let type = 'standard';
     const mod = i % 20;
-    if (mod < 4) type = 'compact';        // 2 Wheelers (Bikes)
-    else if (mod < 15) type = 'standard'; // 4 Wheelers (Standard)
-    else if (mod < 17) type = 'ev';       // 4 Wheelers (EV charging)
-    else if (mod < 19) type = 'large';    // Heavy Vehicles (6+ Wheelers)
+    if (mod < 3) type = 'compact';        // 2 Wheelers (Bikes)
+    else if (mod < 11) type = 'standard'; // 4 Wheelers (Standard)
+    else if (mod < 13) type = 'ev';       // 4 Wheelers (EV charging)
+    else if (mod < 15) type = 'large';    // Heavy Vehicles (6+ Wheelers)
+    else if (mod === 15) type = 'vip';     // VIP Slot
+    else if (mod === 16) type = 'reserved';// Reserved Slot
     else type = 'handicap';               // Handicap access
 
     slots.push({
@@ -37,6 +39,8 @@ const generateSlots = (totalSlots, occupancyRate) => {
       type,
       floor: Math.floor(rowIndex / 2) + 1,
       isOccupied: i < occupiedCount, // First N slots are occupied
+      maintenanceStatus: i === 5 ? 'maintenance' : 'operational', // 1 under maintenance
+      sensorStatus: i === 8 ? 'offline' : 'online',               // 1 sensor offline
     });
   }
 
@@ -550,11 +554,19 @@ const seedDatabase = async () => {
     await mongoose.connect(MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
-    // Clear existing parking lots
+    const Booking = require('../models/Booking');
+    const Alert = require('../models/Alert');
+
+    // Clear existing parking lots, bookings, alerts, and users
     await ParkingLot.deleteMany({});
     console.log('🗑️  Cleared existing parking lots');
 
-    // Clear existing users to ensure clean slate
+    await Booking.deleteMany({});
+    console.log('🗑️  Cleared existing bookings');
+
+    await Alert.deleteMany({});
+    console.log('🗑️  Cleared existing alerts');
+
     await User.deleteMany({});
     console.log('🗑️  Cleared existing users');
 
@@ -576,15 +588,70 @@ const seedDatabase = async () => {
       password: 'password',
       role: 'user',
       avatar: 'https://ui-avatars.com/api/?name=Sarath+User&background=34a853&color=fff',
-      points: 10,
+      points: 25,
+      vehicles: [
+        { vehicleNumber: 'KL-07-CD-1234', vehicleType: 'car' },
+        { vehicleNumber: 'KL-07-EF-5678', vehicleType: 'bike' }
+      ]
     });
-    console.log('👤 Created regular user: user@parkinglot.com / password');
+    console.log('👤 Created regular user: user@parkinglot.com / password (with 2 vehicles)');
+
+    // Create blocked user
+    let blockedUser = await User.create({
+      name: 'Blocked User',
+      email: 'blocked@parkinglot.com',
+      password: 'password',
+      role: 'user',
+      avatar: 'https://ui-avatars.com/api/?name=Blocked+User&background=ea4335&color=fff',
+      points: 0,
+      status: 'blocked'
+    });
+    console.log('👤 Created blocked user: blocked@parkinglot.com / password');
+
+    // Create staff members
+    let managerUser = await User.create({
+      name: 'Karan Manager',
+      email: 'manager@parkinglot.com',
+      password: 'password',
+      role: 'admin',
+      staffRole: 'parking_manager',
+      permissions: ['manage_lots', 'manage_spaces', 'view_reports'],
+      avatar: 'https://ui-avatars.com/api/?name=Karan+Manager&background=fbbc05&color=fff',
+      points: 0,
+    });
+    console.log('👤 Created manager staff: manager@parkinglot.com / password');
+
+    let opsUser = await User.create({
+      name: 'Rohan Operations',
+      email: 'ops@parkinglot.com',
+      password: 'password',
+      role: 'admin',
+      staffRole: 'operations_staff',
+      permissions: ['manage_spaces', 'view_bookings'],
+      avatar: 'https://ui-avatars.com/api/?name=Rohan+Ops&background=4285f4&color=fff',
+      points: 0,
+    });
+    console.log('👤 Created operations staff: ops@parkinglot.com / password');
+
+    let securityUser = await User.create({
+      name: 'Balaji Security',
+      email: 'security@parkinglot.com',
+      password: 'password',
+      role: 'admin',
+      staffRole: 'security_personnel',
+      permissions: ['view_bookings'],
+      avatar: 'https://ui-avatars.com/api/?name=Balaji+Security&background=673ab7&color=fff',
+      points: 0,
+    });
+    console.log('👤 Created security staff: security@parkinglot.com / password');
 
     // Build parking lot documents with generated slots
     const parkingLots = parkingLotsData.map((lotData) => {
       const occupancyRate = (randBetween(30, 80)) / 100; // 30%-80% occupied
       const slots = generateSlots(lotData.totalSlots, occupancyRate);
-      const availableSlots = slots.filter((s) => !s.isOccupied).length;
+      const availableSlots = slots.filter((s) => !s.isOccupied && s.maintenanceStatus === 'operational').length;
+      const disabledSlotsCount = slots.filter(s => s.type === 'handicap').length;
+      const evChargingCount = slots.filter(s => s.type === 'ev').length;
       const amenities = pickRandom(allAmenities, 3, 7);
       const rating = randFloat(3.5, 5.0);
       const totalReviews = randBetween(5, 120);
@@ -599,6 +666,8 @@ const seedDatabase = async () => {
         },
         totalSlots: lotData.totalSlots,
         availableSlots,
+        disabledSlotsCount,
+        evChargingCount,
         pricePerHour: lotData.pricePerHour,
         amenities,
         images: [],
@@ -608,20 +677,100 @@ const seedDatabase = async () => {
         slots,
         owner: adminUser._id,
         isActive: true,
+        status: 'active',
       };
     });
 
     const inserted = await ParkingLot.insertMany(parkingLots);
-    console.log(`🅿️  Inserted ${inserted.length} parking lots:`);
+    console.log(`P  Inserted ${inserted.length} parking lots:`);
+
+    // Seed system alerts linked to inserted lots
+    const sampleAlerts = [
+      {
+        type: 'sensor_failure',
+        title: 'Sensor Offline - A9',
+        message: `Ultrasonic sensor at slot A9 in ${inserted[0].name} has stopped responding.`,
+        severity: 'warning',
+        status: 'active',
+        parkingLot: inserted[0]._id,
+      },
+      {
+        type: 'parking_full',
+        title: 'Facility Capacity Alert',
+        message: `${inserted[1].name} has reached 100% occupancy.`,
+        severity: 'info',
+        status: 'active',
+        parkingLot: inserted[1]._id,
+      },
+      {
+        type: 'maintenance',
+        title: 'Slot A6 Maintenance Required',
+        message: `Physical barrier motor at slot A6 in ${inserted[0].name} is drawing high current and needs inspection.`,
+        severity: 'warning',
+        status: 'active',
+        parkingLot: inserted[0]._id,
+      },
+      {
+        type: 'payment_failure',
+        title: 'Razorpay Gateway Warning',
+        message: 'Elevated rate of credit card checkout timeouts detected on Razorpay sandbox webhook routing.',
+        severity: 'critical',
+        status: 'active',
+      }
+    ];
+    await Alert.insertMany(sampleAlerts);
+    console.log('🚨 Seeded system alerts');
+
+    // Seed historical and active bookings over the last 14 days
+    const bookingsToSeed = [];
+    const nowTime = new Date();
+    const userPool = [regularUser, managerUser, opsUser, adminUser];
+
+    for (let i = 0; i < 350; i++) {
+      const daysAgo = randBetween(0, 14);
+      const startHour = randBetween(8, 20);
+      const durationHours = randBetween(2, 8);
+
+      const startTime = new Date(nowTime);
+      startTime.setDate(nowTime.getDate() - daysAgo);
+      startTime.setHours(startHour, 0, 0, 0);
+
+      const endTime = new Date(startTime);
+      endTime.setHours(startTime.getHours() + durationHours);
+
+      const randomLot = inserted[randBetween(0, inserted.length - 1)];
+      const randomUser = userPool[i % userPool.length];
+      // Multiply by 18 to simulate premium multi-day/weekly pass bookings or corporate reservations
+      const amount = durationHours * randomLot.pricePerHour * 18;
+      
+      const statusValue = (daysAgo === 0 && startHour > nowTime.getHours() - 3) ? 'active' : (randBetween(0, 15) === 1 ? 'cancelled' : 'completed');
+      const paymentStatusValue = statusValue === 'cancelled' ? 'refunded' : 'paid';
+
+      bookingsToSeed.push({
+        user: randomUser._id,
+        parkingLot: randomLot._id,
+        slotNumber: `${String.fromCharCode(65 + randBetween(0, 2))}${randBetween(1, 10)}`,
+        vehicleNumber: `KL-07-${String.fromCharCode(65 + randBetween(0, 25))}${String.fromCharCode(65 + randBetween(0, 25))}-${randBetween(1000, 9999)}`,
+        vehicleType: pickRandom(['car', 'bike', 'suv'], 1, 1)[0],
+        startTime,
+        endTime,
+        duration: durationHours,
+        totalAmount: amount,
+        status: statusValue,
+        paymentStatus: paymentStatusValue,
+        paymentId: `pay_${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
+        createdAt: startTime,
+      });
+    }
+
+    await Booking.insertMany(bookingsToSeed);
+    console.log(`🎟️  Inserted ${bookingsToSeed.length} bookings for historical analytics`);
 
     // Log summary grouped by city
     const cities = ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Bangalore', 'Chennai'];
     cities.forEach((city) => {
       const cityLots = inserted.filter((l) => l.address.includes(city));
       console.log(`   📍 ${city}: ${cityLots.length} lots`);
-      cityLots.forEach((lot) => {
-        console.log(`      - ${lot.name} (${lot.availableSlots}/${lot.totalSlots} available, ₹${lot.pricePerHour}/hr)`);
-      });
     });
 
     console.log('\n✅ Database seeded successfully!');

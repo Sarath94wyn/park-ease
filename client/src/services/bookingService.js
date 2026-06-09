@@ -29,3 +29,13 @@ export const getAllBookings = async () => {
   const { data } = await api.get('/bookings/all');
   return data;
 };
+
+export const createRazorpayOrder = async (id) => {
+  const { data } = await api.post(`/bookings/${id}/razorpay-order`);
+  return data;
+};
+
+export const verifyRazorpayPayment = async (id, paymentData) => {
+  const { data } = await api.post(`/bookings/${id}/razorpay-verify`, paymentData);
+  return data;
+};

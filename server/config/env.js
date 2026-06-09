@@ -12,6 +12,8 @@ const config = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
   nodeEnv: process.env.NODE_ENV || 'development',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
 };
 
 module.exports = config;
