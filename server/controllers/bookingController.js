@@ -12,7 +12,8 @@ const ParkingLot = require('../models/ParkingLot');
  */
 const createBooking = async (req, res, next) => {
   try {
-    const { parkingLotId, slotNumber, vehicleNumber, vehicleType, startTime, endTime } = req.body;
+    const { parkingLotId: bodyParkingLotId, parkingLot: bodyParkingLot, slotNumber, vehicleNumber, vehicleType, startTime, endTime } = req.body;
+    const parkingLotId = bodyParkingLotId || bodyParkingLot;
 
     // Find the parking lot
     const parkingLot = await ParkingLot.findById(parkingLotId);
