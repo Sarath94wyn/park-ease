@@ -71,7 +71,14 @@ export default function BookingPage() {
       setStep('navigation');
     } catch (e) {
       console.error('Failed to register booking slots:', e);
-      toast.error(e.response?.data?.message || 'Conflict detected. Slot occupied.');
+      const serverErrorMsg = e.response?.data?.message;
+      const fieldErrors = e.response?.data?.errors;
+      if (fieldErrors && Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+        const joinedErrors = fieldErrors.map(fe => fe.message).join(', ');
+        toast.error(`Validation Failed: ${joinedErrors}`);
+      } else {
+        toast.error(serverErrorMsg || 'Conflict detected. Slot occupied.');
+      }
     }
   };
 

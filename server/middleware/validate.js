@@ -13,7 +13,7 @@ const validateBooking = [
   body('vehicleNumber')
     .notEmpty()
     .withMessage('Vehicle number is required')
-    .matches(/^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/)
+    .matches(/^[A-Z]{2}[\s-]*[0-9]{1,2}[\s-]*[A-Z]{1,2}[\s-]*[0-9]{1,4}$/i)
     .withMessage(
       'Vehicle number must be in Indian format (e.g. KL01AB1234)'
     ),

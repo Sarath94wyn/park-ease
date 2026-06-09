@@ -60,12 +60,11 @@ const createBooking = async (req, res, next) => {
       });
     }
 
-    // Create the booking (pre-save hook calculates duration & totalAmount)
     const booking = await Booking.create({
       user: req.user._id,
       parkingLot: parkingLotId,
       slotNumber,
-      vehicleNumber,
+      vehicleNumber: vehicleNumber.replace(/[\s-]+/g, '').toUpperCase(),
       vehicleType,
       startTime,
       endTime,
