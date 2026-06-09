@@ -1,4 +1,7 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+export const API_URL = rawUrl.endsWith('/api') || rawUrl.endsWith('/api/')
+  ? rawUrl
+  : `${rawUrl.replace(/\/$/, '')}/api`;
 
 export const AMENITY_ICONS = {
   'cctv': 'Camera',
