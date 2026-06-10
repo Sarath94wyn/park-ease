@@ -58,11 +58,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2 text-slate-600 text-sm">
                 <Phone className="w-4 h-4 text-primary-700 flex-shrink-0" />
-                +91 98765 43210
+                +91 9946643455
               </li>
               <li className="flex items-start gap-2 text-slate-600 text-sm">
                 <MapPin className="w-4 h-4 text-primary-700 flex-shrink-0 mt-0.5" />
-                Kochi, Kerala, India
+                Trivandrum, Kerala, India
               </li>
             </ul>
           </div>
