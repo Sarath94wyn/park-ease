@@ -237,7 +237,7 @@ export default function BookingPage() {
               </div>
 
               {/* Live navigation Map panel */}
-              <div className="relative w-full h-[40vh] rounded-2xl overflow-hidden border border-slate-200">
+              <div className="relative w-full h-[50vh] min-h-[380px] md:h-[450px] rounded-2xl overflow-hidden border border-slate-200">
                 <MapView
                   parkingLots={[lot]}
                   center={[lot.location?.coordinates?.[1] || lot.latitude, lot.location?.coordinates?.[0] || lot.longitude]}
@@ -246,6 +246,7 @@ export default function BookingPage() {
                   selectedLot={lot._id}
                   isNavigating={isNavigating}
                   onStartNavigation={handleStartNavigation}
+                  hideDetailsActions={true}
                 />
               </div>
 
@@ -302,7 +303,7 @@ export default function BookingPage() {
 
           {step === 'payment' && createdBooking && (
             <PaymentSimulator
-              amount={createdBooking.totalAmount}
+              booking={createdBooking}
               onPaymentComplete={handlePaymentSuccess}
               onCancel={() => setStep('form')}
             />

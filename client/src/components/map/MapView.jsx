@@ -148,6 +148,7 @@ export default function MapView({
   onStartNavigation,
   onCloseDetails,
   activeView,
+  hideDetailsActions = false,
 }) {
   const navigate = useNavigate();
   const mapCenter = (center && Array.isArray(center) && center.length >= 2 && !isNaN(parseFloat(center[0])) && !isNaN(parseFloat(center[1])))
@@ -434,40 +435,42 @@ export default function MapView({
           )}
 
           {/* Action Navigation Row */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const lat = selectedLotObj.lat;
-                const lng = selectedLotObj.lng;
-                window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
-              }}
-              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1 border border-slate-300 shadow-sm transition-all active:scale-98 select-none"
-            >
-              <Navigation className="w-4.5 h-4.5 text-primary-700" />
-              <span>Google Maps</span>
-            </button>
-
-            {!isNavigating && (
+          {!hideDetailsActions && (
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
-                onClick={() => onStartNavigation?.(selectedLotObj)}
-                className="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1 shadow-md transition-all active:scale-98 select-none"
+                onClick={() => {
+                  const lat = selectedLotObj.lat;
+                  const lng = selectedLotObj.lng;
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+                }}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1 border border-slate-300 shadow-sm transition-all active:scale-98 select-none"
               >
-                <Compass className="w-4.5 h-4.5 text-white animate-pulse" />
-                <span>Simulate Driving</span>
+                <Navigation className="w-4.5 h-4.5 text-primary-700" />
+                <span>Google Maps</span>
               </button>
-            )}
-            
-            <button
-              type="button"
-              onClick={() => navigate(`/parking/${selectedLotObj._id}`)}
-              className="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-700 hover:from-cyan-400 hover:to-indigo-550 text-white font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1 shadow-md transition-all active:scale-98 select-none"
-            >
-              <Compass className="w-4.5 h-4.5" />
-              <span>Reserve Slot</span>
-            </button>
-          </div>
+
+              {!isNavigating && (
+                <button
+                  type="button"
+                  onClick={() => onStartNavigation?.(selectedLotObj)}
+                  className="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1 shadow-md transition-all active:scale-98 select-none"
+                >
+                  <Compass className="w-4.5 h-4.5 text-white animate-pulse" />
+                  <span>Simulate Driving</span>
+                </button>
+              )}
+              
+              <button
+                type="button"
+                onClick={() => navigate(`/parking/${selectedLotObj._id}`)}
+                className="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-700 hover:from-cyan-400 hover:to-indigo-550 text-white font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1 shadow-md transition-all active:scale-98 select-none"
+              >
+                <Compass className="w-4.5 h-4.5" />
+                <span>Reserve Slot</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
