@@ -12,7 +12,7 @@ const ParkingLot = require('../models/ParkingLot');
  */
 const createBooking = async (req, res, next) => {
   try {
-    const { parkingLotId: bodyParkingLotId, parkingLot: bodyParkingLot, slotNumber, vehicleNumber, vehicleType, startTime, endTime } = req.body;
+    const { parkingLotId: bodyParkingLotId, parkingLot: bodyParkingLot, slotNumber, vehicleNumber, vehicleType, startTime, endTime, totalAmount } = req.body;
     const parkingLotId = bodyParkingLotId || bodyParkingLot;
 
     // Find the parking lot
@@ -68,6 +68,7 @@ const createBooking = async (req, res, next) => {
       vehicleType,
       startTime,
       endTime,
+      totalAmount,
     });
 
     // Mark slot as occupied and decrement available count

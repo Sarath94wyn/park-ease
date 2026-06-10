@@ -72,8 +72,12 @@ bookingSchema.pre('save', async function (next) {
       // Calculate duration in hours, rounded up to the nearest hour
       this.duration = Math.ceil(diffMs / (1000 * 60 * 60));
 
-      // Only calculate totalAmount if not already set and we can look up pricing
-      if (!this.totalAmount || this.isModified('startTime') || this.isModified('endTime')) {
+      // Calculate totalAmount if it's not set, or if the times were modified on an existing booking
+      const timeModified = this.isModified('startTime') || this.isModified('endTime');
+      const isNewWithNoAmount = this.isNew && (this.totalAmount === undefined || this.totalAmount === null);
+      const isExistingWithTimeModified = !this.isNew && timeModified;
+
+      if (isNewWithNoAmount || isExistingWithTimeModified) {
         const ParkingLot = mongoose.model('ParkingLot');
         const lot = await ParkingLot.findById(this.parkingLot);
         if (lot) {
