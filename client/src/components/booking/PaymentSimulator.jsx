@@ -77,7 +77,7 @@ export default function PaymentSimulator({ booking, onPaymentComplete, onCancel 
               setSuccess(true);
               toast.success('Payment captured successfully!');
               setTimeout(() => {
-                onPaymentComplete(response.razorpay_payment_id);
+                onPaymentComplete(response.razorpay_payment_id, false);
               }, 1500);
             } else {
               toast.error(verifyRes.message || 'Verification failed');
@@ -163,7 +163,7 @@ export default function PaymentSimulator({ booking, onPaymentComplete, onCancel 
       toast.success('Payment authorized successfully!');
       setTimeout(() => {
         const mockPaymentId = `PAY_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-        onPaymentComplete(mockPaymentId);
+        onPaymentComplete(mockPaymentId, true);
       }, 1500);
     }, 2500);
   };

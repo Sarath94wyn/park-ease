@@ -136,10 +136,12 @@ export default function BookingPage() {
     };
   }, [isNavigating, navigationRoute]);
 
-  const handlePaymentSuccess = async (paymentId) => {
+  const handlePaymentSuccess = async (paymentId, isSandbox) => {
     try {
-      // Authorize booking via express simulate payment endpoint
-      await simulatePayment(createdBooking._id);
+      if (isSandbox) {
+        // Authorize booking via express simulate payment endpoint
+        await simulatePayment(createdBooking._id);
+      }
       setStep('success');
       toast.success('Parking spot reserved successfully!');
     } catch (e) {

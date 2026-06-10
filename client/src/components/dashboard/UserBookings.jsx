@@ -53,9 +53,11 @@ export default function UserBookings() {
     setShowPaymentModal(true);
   };
 
-  const handlePaymentComplete = async (paymentId) => {
+  const handlePaymentComplete = async (paymentId, isSandbox) => {
     try {
-      await simulatePayment(selectedBooking._id);
+      if (isSandbox) {
+        await simulatePayment(selectedBooking._id);
+      }
       toast.success('Booking fully confirmed!');
       setShowPaymentModal(false);
       setSelectedBooking(null);
